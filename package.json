@@ -1,0 +1,37 @@
+{
+  "name": "hello-code",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Code Agent Dashboard - A full-stack application for AI code agent management",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run dev:server & bun run dev:web",
+    "dev:web": "bun run --filter @hello-code/web dev",
+    "dev:server": "bun run --filter @hello-code/server dev",
+    "build": "bun run build:web && bun run build:server",
+    "build:web": "bun run --filter @hello-code/web build",
+    "build:server": "bun run --filter @hello-code/server build",
+    "lint": "bun run --filter @hello-code/web lint && bun run --filter @hello-code/server lint",
+    "db:migrate": "bun run --filter @hello-code/server db:migrate",
+    "db:generate": "bun run --filter @hello-code/server db:generate",
+    "db:push": "bun run --filter @hello-code/server db:push"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.2",
+    "@ai-sdk/deepseek": "^2.0.2",
+    "@ai-sdk/openai": "^3.0.2",
+    "@ai-sdk/react": "^3.0.6",
+    "@ant-design/x": "^2.0.0",
+    "@ant-design/x-markdown": "^2.1.2",
+    "@ant-design/x-sdk": "^2.1.2",
+    "ai": "^6.0.6",
+    "antd-style": "^4.1.0",
+    "dayjs": "^1.11.19",
+    "eventemitter3": "^5.0.1"
+  }
+}

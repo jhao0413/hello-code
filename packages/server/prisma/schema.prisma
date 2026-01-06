@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid()) /// Unique identifier for the user
+  email     String   @unique /// User's email address
+  name      String? /// User's display name
+  created_at DateTime @default(now()) @map("created_at") /// Timestamp when the user was created
+  updated_at DateTime @updatedAt @map("updated_at") /// Timestamp when the user was last updated
+
+  agents        Agent[]
+  conversations Conversation[]
+  agentSessions AgentSession[]
+
+  @@map("users")
+}
+
+model Agent {
+  id          String   @id @default(cuid()) /// Unique identifier for the agent
+  name        String /// Name of the agent
+  description String? /// Description of the agent's purpose
+  model       String   @default("claude-3-sonnet") /// AI model used by the agent
+  system_prompt String? /// System prompt that defines the agent's behavior
+  status      AgentStatus @default(IDLE) /// Current status of the agent
+  config      Json? /// Additional configuration for the agent
+  created_at   DateTime @default(now()) @map("created_at") /// Timestamp when the agent was created
+  updated_at   DateTime @updatedAt @map("updated_at") /// Timestamp when the agent was last updated
+
+  userId        String @map("user_id")
+  user          User          @relation(fields: [userId], references: [id])
+  conversations Conversation[]
+
+  @@map("agents")
+}
+
+model Conversation {
+  id        String   @id @default(cuid()) /// Unique identifier for the conversation
+  title     String? /// Title of the conversation
+  created_at DateTime @default(now()) @map("created_at") /// Timestamp when the conversation was created
+  updated_at DateTime @updatedAt @map("updated_at") /// Timestamp when the conversation was last updated
+
+  userId   String @map("user_id")
+  user     User     @relation(fields: [userId], references: [id])
+  agentId  String? @map("agent_id")
+  agent    Agent?   @relation(fields: [agentId], references: [id])
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id        String   @id @default(cuid()) /// Unique identifier for the message
+  role      MessageRole /// Role of the message sender (user, assistant, or system)
+  content   String /// Content of the message
+  metadata  Json? /// Additional metadata for the message
+  created_at DateTime @default(now()) @map("created_at") /// Timestamp when the message was created
+
+  conversationId String @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+enum AgentStatus {
+  IDLE /// Agent is idle and available
+  ACTIVE /// Agent is currently processing
+  ERROR /// Agent has encountered an error
+}
+
+enum MessageRole {
+  USER /// Message from the user
+  ASSISTANT /// Message from the AI assistant
+  SYSTEM /// System message
+}
+
+model AgentSession {
+  id               String   @id @default(cuid()) /// Unique identifier for the agent session
+  session_id       String   @unique /// External session ID provided by the client
+  user_prompt      String /// User's question or prompt
+  prompt_tokens    Int /// Number of input tokens used
+  completion_tokens Int /// Number of output tokens generated
+  total_tokens     Int /// Total number of tokens used
+  success          Boolean /// Whether the session completed successfully
+  duration         Int /// Duration of the session in milliseconds
+  turns_count      Int /// Number of conversation turns
+  tool_calls_count Int /// Number of tool calls made during the session
+  model            String /// AI model used in the session
+  languages        String[] /// Programming languages used in the session
+  timestamp        DateTime /// Client-side timestamp
+  created_at       DateTime @default(now()) @map("created_at") /// Timestamp when the session was created
+
+  userId  String @map("user_id")
+  user    User   @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([timestamp])
+  @@map("agent_sessions")
+}
