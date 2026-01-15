@@ -60,11 +60,8 @@ interface MessagePart {
 const InfographicCode: React.FC<ComponentProps> = (props) => {
 	const { className, children } = props;
 	const lang = className?.match(/language-(\w+)/)?.[1] || '';
-
 	if (typeof children !== 'string') return null;
 	if (lang === 'infographic') {
-		// console.log('Rendering infographic, content length:', children.length);
-		// console.log('Infographic content:', children);
 		return <ReactInfographic>{children}</ReactInfographic>;
 	}
 	return <code className={className}>{children}</code>;

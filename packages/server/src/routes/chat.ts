@@ -1,96 +1,15 @@
-import { deepseek } from '@ai-sdk/deepseek';
-import { streamText } from 'ai';
 import { Elysia, t } from 'elysia';
+import type { CoreMessage } from 'ai';
 import prisma from '../lib/prisma.js';
-
-const INFOGRAPHIC_SKILL_PROMPT = `
-你具备创建信息图表的能力。当用户需要可视化展示数据、流程、对比、时间线等信息时，请在回复中使用 markdown 代码块输出 infographic 语法。
-
-## 输出格式
-
-使用 \`\`\` infographic 代码块包裹语法：
-
-\`\`\` infographic
-infographic <template-name>
-data
-  title 标题
-  desc 描述（可选）
-  items
-    - label 项目标签
-      value 数值（可选）
-      desc 项目描述（可选）
-      icon 图标（可选）
-\`\`\`
-
-## 可用模板
-
-- sequence-zigzag-steps-underline-text
-- sequence-horizontal-zigzag-underline-text
-- sequence-horizontal-zigzag-simple-illus
-- sequence-circular-simple
-- sequence-filter-mesh-simple
-- sequence-mountain-underline-text
-- sequence-cylinders-3d-simple
-- sequence-color-snake-steps-horizontal-icon-line
-- sequence-pyramid-simple
-- sequence-roadmap-vertical-simple
-- sequence-roadmap-vertical-plain-text
-- sequence-zigzag-pucks-3d-simple
-- sequence-ascending-steps
-- sequence-ascending-stairs-3d-underline-text
-- sequence-snake-steps-compact-card
-- sequence-snake-steps-underline-text
-- sequence-snake-steps-simple
-- sequence-stairs-front-compact-card
-- sequence-stairs-front-pill-badge
-- sequence-timeline-simple
-- sequence-timeline-rounded-rect-node
-- sequence-timeline-simple-illus
-- compare-binary-horizontal-simple-fold
-- compare-hierarchy-left-right-circle-node-pill-badge
-- compare-swot
-- quadrant-quarter-simple-card
-- quadrant-quarter-circular
-- quadrant-simple-illus
-- relation-circle-icon-badge
-- relation-circle-circular-progress
-- compare-binary-horizontal-badge-card-arrow
-- compare-binary-horizontal-underline-text-vs
-- hierarchy-tree-tech-style-capsule-item
-- hierarchy-tree-curved-line-rounded-rect-node
-- hierarchy-tree-tech-style-badge-card
-- chart-column-simple
-- chart-bar-plain-text
-- chart-line-plain-text
-- chart-pie-plain-text
-- chart-pie-compact-card
-- chart-pie-donut-plain-text
-- chart-pie-donut-pill-badge
-- chart-wordcloud
-- list-grid-badge-card
-- list-grid-candy-card-lite
-- list-grid-ribbon-card
-- list-row-horizontal-icon-arrow
-- list-row-simple-illus
-- list-sector-plain-text
-- list-column-done-list
-- list-column-vertical-icon-arrow
-- list-column-simple-vertical-arrow
-
-## 图标资源（可选）
-使用 ref:search:关键词 格式自动搜索图标，如：ref:search:rocket
-
-## 主题配置（可选）
-themeConfig
-  palette antv
-
-## 注意事项
-1. 保持用户输入的语言
-2. 根据数据特点选择合适的模板
-3. items 数量建议 3-7 个
-4. 语法使用空格缩进（2个空格）
-5. 键值对之间用空格分隔，不使用冒号
-`;
+import { weatherTool, infographicTool } from '../tools/index.js';
+import {
+	databaseIntrospectionTool,
+	sqlGenerationTool,
+	sqlExecutionTool,
+} from '../tools/database-tools.js';
+import { Mastra } from '@mastra/core';
+import { Agent } from '@mastra/core/agent';
+import { PinoLogger } from '@mastra/loggers';
 
 interface UIMessage {
 	id?: string;
@@ -98,12 +17,7 @@ interface UIMessage {
 	parts: Array<{ type: string; text?: string }>;
 }
 
-interface CoreMessage {
-	role: 'user' | 'assistant' | 'system';
-	content: string;
-}
-
-function convertToCoreMesages(messages: UIMessage[]): CoreMessage[] {
+function convertToCoreMessages(messages: UIMessage[]): CoreMessage[] {
 	return messages.map((msg) => ({
 		role: msg.role,
 		content: msg.parts
@@ -116,10 +30,12 @@ function convertToCoreMesages(messages: UIMessage[]): CoreMessage[] {
 export const chatRoutes = new Elysia({ prefix: '/api/chat' }).post(
 	'/',
 	async ({ body }) => {
-		const { messages, conversationId, agentId } = body as {
+		const { messages, conversationId, agentId, connectionString, enableDatabase = true } = body as {
 			messages: UIMessage[];
 			conversationId?: string;
 			agentId?: string;
+			connectionString?: string;
+			enableDatabase?: boolean;
 		};
 
 		let systemPrompt = 'You are a helpful AI code assistant.';
@@ -132,7 +48,7 @@ export const chatRoutes = new Elysia({ prefix: '/api/chat' }).post(
 			}
 		}
 
-		const coreMessages = convertToCoreMesages(messages);
+		const coreMessages = convertToCoreMessages(messages);
 		if (conversationId) {
 			const lastMessage = coreMessages[coreMessages.length - 1];
 			if (lastMessage && lastMessage.role === 'user') {
@@ -146,26 +62,66 @@ export const chatRoutes = new Elysia({ prefix: '/api/chat' }).post(
 			}
 		}
 
-		const fullSystemPrompt = `${systemPrompt}\n\n${INFOGRAPHIC_SKILL_PROMPT}`;
+		// 构建工具集合
+		const tools: any = {
+			getWeather: weatherTool,
+			createInfographicSyntax: infographicTool,
+		};
 
-		const result = streamText({
-			model: deepseek('deepseek-chat'),
-			system: fullSystemPrompt,
-			messages: coreMessages,
-			async onFinish({ text }) {
-				if (conversationId) {
-					await prisma.message.create({
-						data: {
-							role: 'ASSISTANT',
-							content: text,
-							conversationId,
-						},
-					});
-				}
-			},
+		// 确定使用的数据库连接字符串
+		// 优先级：1. 传入的 connectionString  2. 环境变量 DATABASE_URL
+		let dbConnectionString: string | undefined;
+		if (connectionString) {
+			dbConnectionString = connectionString;
+		} else if (enableDatabase && process.env.DATABASE_URL) {
+			dbConnectionString = process.env.DATABASE_URL;
+		}
+
+		// 如果有数据库连接字符串，添加数据库查询工具
+		if (dbConnectionString) {
+			tools.databaseIntrospection = databaseIntrospectionTool;
+			tools.sqlGeneration = sqlGenerationTool;
+			tools.sqlExecution = sqlExecutionTool;
+		}
+
+		const BaseAgent = new Agent({
+			name: 'Blinko Chat Agent',
+			instructions: systemPrompt,
+			model: 'deepseek/deepseek-chat',
+			tools,
 		});
 
-		return result.toUIMessageStreamResponse();
+		const agent = new Mastra({
+			agents: { BaseAgent },
+			logger:
+				process.env.NODE_ENV === 'development'
+					? new PinoLogger({
+							name: 'Mastra',
+							level: 'debug',
+					  })
+					: undefined,
+		}).getAgent('BaseAgent');
+
+		const originalDbUrl = process.env.DATABASE_URL;
+		if (dbConnectionString) {
+			process.env.DATABASE_URL = dbConnectionString;
+		}
+
+		try {
+			const stream = await agent.stream(coreMessages, {
+				format: 'aisdk',
+			});
+
+			return stream.toUIMessageStreamResponse();
+		} finally {
+			if (dbConnectionString) {
+				if (originalDbUrl) {
+					process.env.DATABASE_URL = originalDbUrl;
+				} else {
+					delete process.env.DATABASE_URL;
+				}
+			}
+		}
 	},
 	{
 		body: t.Object({
@@ -183,6 +139,8 @@ export const chatRoutes = new Elysia({ prefix: '/api/chat' }).post(
 			),
 			conversationId: t.Optional(t.String()),
 			agentId: t.Optional(t.String()),
+			connectionString: t.Optional(t.String()),
+			enableDatabase: t.Optional(t.Boolean()),
 		}),
 	},
 );

@@ -4,6 +4,7 @@ import { agentSessionRoutes } from './routes/agent-sessions.js';
 import { agentRoutes } from './routes/agents.js';
 import { chatRoutes } from './routes/chat.js';
 import { conversationRoutes } from './routes/conversations.js';
+import { databaseQueryRoutes } from './routes/database-query.js';
 
 const app = new Elysia()
 	.use(cors())
@@ -11,6 +12,7 @@ const app = new Elysia()
 	.use(agentRoutes)
 	.use(conversationRoutes)
 	.use(agentSessionRoutes)
+	.use(databaseQueryRoutes)
 	.get('/api/health', () => ({
 		status: 'ok',
 		timestamp: new Date().toISOString(),

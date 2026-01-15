@@ -29,9 +29,14 @@
     "@ant-design/x": "^2.0.0",
     "@ant-design/x-markdown": "^2.1.2",
     "@ant-design/x-sdk": "^2.1.2",
+    "@mastra/ai-sdk": "^0.3.3",
+    "@mastra/core": "^0.24.9",
+    "@mastra/libsql": "^0.16.4",
     "ai": "^6.0.6",
     "antd-style": "^4.1.0",
     "dayjs": "^1.11.19",
-    "eventemitter3": "^5.0.1"
+    "eventemitter3": "^5.0.1",
+    "mastra": "^0.18.9",
+    "neovate": "^0.0.0-alpha.0"
   }
 }
