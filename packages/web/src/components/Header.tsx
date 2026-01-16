@@ -4,7 +4,7 @@ import {
 	QuestionCircleOutlined,
 	GithubOutlined,
 } from '@ant-design/icons';
-import { Button, Input, Badge, Avatar } from '@heroui/react';
+import { Button, Badge } from '@heroui/react';
 
 interface HeaderProps {
 	title: string;

@@ -358,7 +358,7 @@ const Independent = () => {
 
 	const [inputValue, setInputValue] = useState('');
 
-	const listRef = useRef<any>(null);
+	const listRef = useRef<{ scrollTo: (options: { top: string | number }) => void } | null>(null);
 
 	const { messages, sendMessage, status, stop } = useChat();
 

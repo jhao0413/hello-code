@@ -235,18 +235,14 @@ export default function Dashboard() {
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		// 模拟稍微长一点的加载时间以展示骨架屏
-		const timer = setTimeout(() => {
-			fetch('/api/agent-sessions/stats')
-				.then((res) => {
-					if (!res.ok) throw new Error('Failed to fetch stats');
-					return res.json();
-				})
-				.then(setStats)
-				.catch((err) => setError(err.message))
-				.finally(() => setLoading(false));
-		}, 800);
-		return () => clearTimeout(timer);
+		fetch('/api/agent-sessions/stats')
+			.then((res) => {
+				if (!res.ok) throw new Error('Failed to fetch stats');
+				return res.json();
+			})
+			.then(setStats)
+			.catch((err) => setError(err.message))
+			.finally(() => setLoading(false));
 	}, []);
 
 	if (error) {
