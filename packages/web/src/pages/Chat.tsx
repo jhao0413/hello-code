@@ -1,6 +1,7 @@
 import { useChat } from '@ai-sdk/react';
 import {
 	AppstoreAddOutlined,
+	ArrowUpOutlined,
 	CloudUploadOutlined,
 	CommentOutlined,
 	DeleteOutlined,
@@ -9,7 +10,9 @@ import {
 	FileSearchOutlined,
 	GlobalOutlined,
 	HeartOutlined,
+	HistoryOutlined,
 	PaperClipOutlined,
+	PlusOutlined,
 	ProductOutlined,
 	QuestionCircleOutlined,
 	ScheduleOutlined,
@@ -30,7 +33,7 @@ import {
 } from '@ant-design/x';
 import Think from '@ant-design/x/es/think';
 import XMarkdown, { type ComponentProps } from '@ant-design/x-markdown';
-import { Avatar, Button, Flex, message, Pagination, Space } from 'antd';
+import { Avatar, Button, Drawer, Flex, message, Pagination, Space } from 'antd';
 import dayjs from 'dayjs';
 import React, { useRef, useState } from 'react';
 import '@ant-design/x-markdown/themes/light.css';
@@ -339,33 +342,28 @@ const Independent = () => {
 
 	const { conversations, activeConversationKey } = state;
 
-	const setActiveConversationKey = (key) => {
+	const setActiveConversationKey = (key: string) => {
 		setState((prev) => ({ ...prev, activeConversationKey: key }));
 	};
 
-	const setConversations = (newConversations) => {
+	const setConversations = (newConversations: typeof DEFAULT_CONVERSATIONS_ITEMS) => {
 		setState((prev) => ({ ...prev, conversations: newConversations }));
-	};
-
-	const _addConversation = (newConversation) => {
-		setState((prev) => ({
-			...prev,
-			conversations: [...prev.conversations, newConversation],
-		}));
 	};
 
 	const [className] = useMarkdownTheme();
 	const [_messageApi, contextHolder] = message.useMessage();
 	const [attachmentsOpen, setAttachmentsOpen] = useState(false);
 	const [attachedFiles, setAttachedFiles] = useState([]);
+	const [historyOpen, setHistoryOpen] = useState(false);
 
 	const [inputValue, setInputValue] = useState('');
 
-	const listRef = useRef(null);
+	const listRef = useRef<any>(null);
 
 	const { messages, sendMessage, status, stop } = useChat();
 
 	const isLoading = status === 'streaming' || status === 'submitted';
+	const hasMessages = messages && messages.length > 0;
 
 	const onSubmit = (val: string) => {
 		if (!val) return;
@@ -373,91 +371,29 @@ const Independent = () => {
 		listRef.current?.scrollTo({ top: 'bottom' });
 	};
 
-	const chatSide = (
-		<div className="bg-gray-100/80 w-[280px] h-full flex flex-col p-0 px-3 box-border">
-			<div className="flex items-center justify-start px-6 box-border gap-2 my-6">
-				<img
-					src="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*eco6RrQhxbMAAAAAAAAAAAAADgCCAQ/original"
-					draggable={false}
-					alt="logo"
-					width={24}
-					height={24}
-				/>
-				<span className="font-bold text-gray-800 text-base">Hello Code</span>
-			</div>
-			<Conversations
-				creation={{
-					onClick: () => {
-						const now = dayjs().valueOf().toString();
-						const newConversation = {
-							key: now,
-							label: `新的会话 ${conversations.length + 1}`,
-							group: '今天',
-						};
-						setConversations((prev) => ({
-							...prev,
-							conversations: [...prev.conversations, newConversation],
-						}));
-						setActiveConversationKey(now);
-					},
-				}}
-				items={conversations.map(({ key, label, ...other }) => ({
-					key,
-					label: key === activeConversationKey ? `[当前会话]${label}` : label,
-					...other,
-				}))}
-				className="overflow-y-auto mt-3 p-0 flex-1"
-				activeKey={activeConversationKey}
-				onActiveChange={setActiveConversationKey}
-				groupable
-				styles={{ item: { padding: '0 8px' } }}
-				menu={(conversation) => ({
-					items: [
-						{
-							label: '重命名',
-							key: 'rename',
-							icon: <EditOutlined />,
-						},
-						{
-							label: '删除',
-							key: 'delete',
-							icon: <DeleteOutlined />,
-							danger: true,
-							onClick: () => {
-								const newList = conversations.filter(
-									(item) => item.key !== conversation.key,
-								);
-								const newKey = newList?.[0]?.key;
-								setConversations((prev) => ({
-									...prev,
-									conversations: newList,
-								}));
-								if (conversation.key === activeConversationKey) {
-									setActiveConversationKey(newKey);
-								}
-							},
-						},
-					],
-				})}
-			/>
+	const handleCreateNewChat = () => {
+		const now = dayjs().valueOf().toString();
+		const newConversation = {
+			key: now,
+			label: `新的会话 ${conversations.length + 1}`,
+			group: '今天',
+		};
+		setConversations([...conversations, newConversation]);
+		setActiveConversationKey(now);
+		// In a real app, we would also reset messages here
+		message.success('已创建新会话');
+	};
 
-			<div className="border-t border-gray-300 h-10 flex items-center justify-between">
-				<Avatar size={24} />
-				<Button type="text" icon={<QuestionCircleOutlined />} />
-			</div>
-		</div>
-	);
-
-	const chatList = (
+	const chatList = hasMessages ? (
 		<div
-			className="flex flex-1 min-h-0 flex-col overflow-auto"
+			className="flex flex-1 min-h-0 flex-col overflow-auto w-full"
 			style={{ width: '100%' }}
 		>
-			{messages?.length ? (
+			<div className="w-full max-w-4xl mx-auto">
 				<Bubble.List
 					ref={listRef}
-					items={messages?.map((msg, idx) => {
-const content =
+					items={messages.map((msg, idx) => {
+						const content =
 							msg.parts
 								?.filter((part: MessagePart) => part.type === 'text')
 								.map((part: MessagePart) => part.text)
@@ -475,76 +411,78 @@ const content =
 					})}
 					role={getRole(className)}
 				/>
-			) : (
-				<Flex
-					vertical
+			</div>
+		</div>
+	) : (
+		<div className="w-full max-w-4xl flex flex-col justify-center">
+			<Flex
+				vertical
+				style={{
+					width: '100%',
+				}}
+				gap={16}
+				className="w-full px-6 box-border"
+			>
+				<Welcome
 					style={{
-						maxWidth: 1152,
+						width: '100%',
 					}}
+					variant="borderless"
+					icon="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*s5sNRo5LjfQAAAAAAAAAAAAADgCCAQ/fmt.webp"
+					title="欢迎使用"
+					description="欢迎使用 Hello Code"
+					extra={
+						<Space>
+							<Button icon={<ShareAltOutlined />} />
+							<Button icon={<EllipsisOutlined />} />
+						</Space>
+					}
+				/>
+				<Flex
 					gap={16}
-					className="pt-8 w-full px-6 box-border"
+					justify="center"
+					style={{
+						width: '100%',
+					}}
 				>
-					<Welcome
-						style={{
-							width: '100%',
+					<Prompts
+						items={[HOT_TOPICS]}
+						styles={{
+							list: { height: '100%' },
+							item: {
+								flex: 1,
+								backgroundImage:
+									'linear-gradient(123deg, #e5f4ff 0%, #efe7ff 100%)',
+								borderRadius: 12,
+								border: 'none',
+							},
+							subItem: { padding: 0, background: 'transparent' },
 						}}
-						variant="borderless"
-						icon="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*s5sNRo5LjfQAAAAAAAAAAAAADgCCAQ/fmt.webp"
-						title="欢迎使用"
-						description="欢迎使用 Hello Code"
-						extra={
-							<Space>
-								<Button icon={<ShareAltOutlined />} />
-								<Button icon={<EllipsisOutlined />} />
-							</Space>
-						}
+						onItemClick={(info) => {
+							onSubmit(String(info.data.description));
+						}}
+						className="w-full"
 					/>
-					<Flex
-						gap={16}
-						justify="center"
-						style={{
-							width: '100%',
-						}}
-					>
-						<Prompts
-							items={[HOT_TOPICS]}
-							styles={{
-								list: { height: '100%' },
-								item: {
-									flex: 1,
-									backgroundImage:
-										'linear-gradient(123deg, #e5f4ff 0%, #efe7ff 100%)',
-									borderRadius: 12,
-									border: 'none',
-								},
-								subItem: { padding: 0, background: 'transparent' },
-							}}
-							onItemClick={(info) => {
-								onSubmit(String(info.data.description));
-							}}
-							className="w-full max-w-[1152px]"
-						/>
 
-						<Prompts
-							items={[DESIGN_GUIDE]}
-							styles={{
-								item: {
-									flex: 1,
-									backgroundImage:
-										'linear-gradient(123deg, #e5f4ff 0%, #efe7ff 100%)',
-									borderRadius: 12,
-									border: 'none',
-								},
-								subItem: { background: '#ffffffa6' },
-							}}
-							onItemClick={(info) => {
-								onSubmit(String(info.data.description));
-							}}
-							className="w-full max-w-[1152px]"
-						/>
-					</Flex>
+					<Prompts
+						items={[DESIGN_GUIDE]}
+						styles={{
+							item: {
+								flex: 1,
+								backgroundImage:
+									'linear-gradient(123deg, #e5f4ff 0%, #efe7ff 100%)',
+								borderRadius: 12,
+								border: 'none',
+							},
+							subItem: { background: '#ffffffa6' },
+						}}
+						onItemClick={(info) => {
+							onSubmit(String(info.data.description));
+						}}
+						className="w-full"
+					/>
 				</Flex>
-			)}
+			</Flex>
 		</div>
 	);
 
@@ -573,7 +511,12 @@ const content =
 	);
 
 	const chatSender = (
-		<Flex vertical gap={12} align="center" className="w-full">
+		<Flex
+			vertical
+			gap={12}
+			align="center"
+			className={`w-full max-w-4xl mx-auto ${hasMessages ? 'mb-6' : 'mt-8'}`}
+		>
 			<Sender
 				value={inputValue}
 				header={senderHeader}
@@ -582,20 +525,59 @@ const content =
 					setInputValue('');
 				}}
 				onChange={setInputValue}
+				onKeyDown={(e) => {
+					if (e.key === 'Enter' && !e.shiftKey) {
+						e.preventDefault();
+						if (!isLoading && inputValue.trim()) {
+							onSubmit(inputValue);
+							setInputValue('');
+						}
+					}
+				}}
 				onCancel={() => {
 					stop();
 				}}
-				prefix={
-					<Button
-						type="text"
-						icon={<PaperClipOutlined style={{ fontSize: 18 }} />}
-						onClick={() => setAttachmentsOpen(!attachmentsOpen)}
-					/>
+				submitType="enter"
+				suffix={<></>}
+				footer={
+					<Flex justify="space-between" align="center" className="mt-2">
+						<Space>
+							<Button
+								type="text"
+								icon={<PlusOutlined />}
+								onClick={handleCreateNewChat}
+								title="新会话"
+							/>
+							<Button
+								type="text"
+								icon={<HistoryOutlined />}
+								onClick={() => setHistoryOpen(true)}
+								title="历史记录"
+							/>
+							<Button
+								type="text"
+								icon={<PaperClipOutlined style={{ fontSize: 18 }} />}
+								onClick={() => setAttachmentsOpen(!attachmentsOpen)}
+								title="上传文件"
+							/>
+						</Space>
+						<Button
+							type="primary"
+							icon={<ArrowUpOutlined />}
+							loading={isLoading}
+							disabled={isLoading || !inputValue.trim()}
+							onClick={() => {
+								onSubmit(inputValue);
+								setInputValue('');
+							}}
+						/>
+					</Flex>
 				}
 				loading={isLoading}
-				className="w-full max-w-[1152px]"
+				className="w-full"
 				allowSpeech
 				placeholder="请输入问题或使用技能"
+				autoSize={{ minRows: 2, maxRows: 10 }}
 			/>
 		</Flex>
 	);
@@ -605,13 +587,65 @@ const content =
 			<ChatContext.Provider value={{}}>
 				{contextHolder}
 				<div className="w-full h-full flex bg-white font-sans">
-					{chatSide}
-					<div className="h-full flex-1 flex items-center justify-center overflow-hidden px-6">
-						<div className="h-full w-full max-w-6xl flex flex-col overflow-hidden">
+					<div className="h-full flex-1 flex items-center justify-center overflow-hidden">
+						<div
+							className={`h-full w-full flex flex-col overflow-hidden ${
+								hasMessages ? '' : 'justify-center items-center p-4'
+							}`}
+						>
 							{chatList}
 							{chatSender}
 						</div>
 					</div>
+
+					<Drawer
+						title="历史会话"
+						placement="left"
+						onClose={() => setHistoryOpen(false)}
+						open={historyOpen}
+						width={300}
+					>
+						<Conversations
+							items={conversations.map(({ key, label, ...other }) => ({
+								key,
+								label: key === activeConversationKey ? `[当前会话]${label}` : label,
+								...other,
+							}))}
+							className="overflow-y-auto"
+							activeKey={activeConversationKey}
+							onActiveChange={(key) => {
+								setActiveConversationKey(key);
+								setHistoryOpen(false);
+							}}
+							groupable
+							styles={{ item: { padding: '0 8px' } }}
+							menu={(conversation) => ({
+								items: [
+									{
+										label: '重命名',
+										key: 'rename',
+										icon: <EditOutlined />,
+									},
+									{
+										label: '删除',
+										key: 'delete',
+										icon: <DeleteOutlined />,
+										danger: true,
+										onClick: () => {
+											const newList = conversations.filter(
+												(item) => item.key !== conversation.key,
+											);
+											const newKey = newList?.[0]?.key;
+											setConversations(newList);
+											if (conversation.key === activeConversationKey) {
+												setActiveConversationKey(newKey);
+											}
+										},
+									},
+								],
+							})}
+						/>
+					</Drawer>
 				</div>
 			</ChatContext.Provider>
 		</XProvider>

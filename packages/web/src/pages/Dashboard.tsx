@@ -1,15 +1,21 @@
 import {
 	ArrowDownOutlined,
 	ArrowUpOutlined,
+	CalendarOutlined,
 	CheckCircleOutlined,
 	ClockCircleOutlined,
 	CloseCircleOutlined,
+	CloudDownloadOutlined,
 	CrownOutlined,
+	EllipsisOutlined,
 	FieldTimeOutlined,
 	FireOutlined,
 	HistoryOutlined,
+	MoreOutlined,
+	ReloadOutlined,
 	ThunderboltOutlined,
 	TrophyOutlined,
+	UserOutlined,
 } from '@ant-design/icons';
 import {
 	Avatar,
@@ -18,11 +24,18 @@ import {
 	CardBody,
 	CardHeader,
 	Chip,
+	Dropdown,
+	DropdownItem,
+	DropdownMenu,
+	DropdownTrigger,
 	Progress,
-	Spinner,
+	Skeleton,
+	User,
 } from '@heroui/react';
-import { Col, Row, Timeline } from 'antd';
+import { Col, Row, Timeline, DatePicker } from 'antd';
 import { Fragment, useEffect, useState } from 'react';
+
+const { RangePicker } = DatePicker;
 
 interface DashboardStats {
 	totalSessions: number;
@@ -129,10 +142,10 @@ function formatTimeAgo(timestamp: string) {
 	const minutes = Math.floor(diff / 60000);
 	const hours = Math.floor(diff / 3600000);
 
-	if (minutes < 1) return 'Just now';
-	if (minutes < 60) return `${minutes} min ago`;
-	if (hours < 24) return `${hours} hours ago`;
-	return time.toLocaleDateString('en-US');
+	if (minutes < 1) return '刚刚';
+	if (minutes < 60) return `${minutes} 分钟前`;
+	if (hours < 24) return `${hours} 小时前`;
+	return time.toLocaleDateString('zh-CN');
 }
 
 const createSmoothPath = (points: { x: number; y: number }[]) => {
@@ -150,59 +163,135 @@ const createSmoothPath = (points: { x: number; y: number }[]) => {
 	return d;
 };
 
+// 骨架屏组件
+const DashboardSkeleton = () => (
+	<div className="space-y-6 animate-pulse">
+		{/* Header Skeleton */}
+		<div className="flex justify-between items-end mb-8">
+			<div className="space-y-2">
+				<Skeleton className="rounded-lg w-48 h-8" />
+				<Skeleton className="rounded-lg w-64 h-4" />
+			</div>
+			<div className="flex gap-2">
+				<Skeleton className="rounded-lg w-32 h-10" />
+				<Skeleton className="rounded-lg w-10 h-10" />
+			</div>
+		</div>
+
+		{/* Stats Grid Skeleton */}
+		<Row gutter={[24, 24]}>
+			{[1, 2, 3, 4].map((i) => (
+				<Col xs={24} sm={12} xl={6} key={i}>
+					<Card className="h-32 rounded-2xl">
+						<CardBody className="flex flex-row items-center gap-4 p-6">
+							<Skeleton className="rounded-xl w-14 h-14" />
+							<div className="flex-1 space-y-2">
+								<Skeleton className="rounded-lg w-20 h-4" />
+								<Skeleton className="rounded-lg w-24 h-8" />
+							</div>
+						</CardBody>
+					</Card>
+				</Col>
+			))}
+		</Row>
+
+		{/* Charts Skeleton */}
+		<Row gutter={[24, 24]}>
+			<Col xs={24} lg={16}>
+				<Card className="h-[400px] rounded-2xl">
+					<CardHeader className="px-6 pt-6">
+						<Skeleton className="rounded-lg w-32 h-6" />
+					</CardHeader>
+					<CardBody>
+						<Skeleton className="rounded-lg w-full h-full" />
+					</CardBody>
+				</Card>
+			</Col>
+			<Col xs={24} lg={8}>
+				<Card className="h-[400px] rounded-2xl">
+					<CardHeader className="px-6 pt-6">
+						<Skeleton className="rounded-lg w-32 h-6" />
+					</CardHeader>
+					<CardBody className="space-y-4">
+						{[1, 2, 3, 4, 5].map((i) => (
+							<div key={i} className="space-y-2">
+								<div className="flex justify-between">
+									<Skeleton className="rounded w-16 h-4" />
+									<Skeleton className="rounded w-10 h-4" />
+								</div>
+								<Skeleton className="rounded-full w-full h-2" />
+							</div>
+						))}
+					</CardBody>
+				</Card>
+			</Col>
+		</Row>
+	</div>
+);
+
 export default function Dashboard() {
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		fetch('/api/agent-sessions/stats')
-			.then((res) => {
-				if (!res.ok) throw new Error('Failed to fetch stats');
-				return res.json();
-			})
-			.then(setStats)
-			.catch((err) => setError(err.message))
-			.finally(() => setLoading(false));
+		// 模拟稍微长一点的加载时间以展示骨架屏
+		const timer = setTimeout(() => {
+			fetch('/api/agent-sessions/stats')
+				.then((res) => {
+					if (!res.ok) throw new Error('Failed to fetch stats');
+					return res.json();
+				})
+				.then(setStats)
+				.catch((err) => setError(err.message))
+				.finally(() => setLoading(false));
+		}, 800);
+		return () => clearTimeout(timer);
 	}, []);
-
-	if (loading) {
-		return (
-			<div className="flex items-center justify-center h-64">
-				<Spinner size="lg" />
-			</div>
-		);
-	}
 
 	if (error) {
 		return (
-			<div className="flex items-center justify-center h-64 text-red-500">
-				加载失败: {error}
+			<div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
+				<div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center">
+					<CloseCircleOutlined className="text-2xl text-red-500" />
+				</div>
+				<h3 className="text-lg font-semibold text-gray-800">加载失败</h3>
+				<p className="text-gray-500">{error}</p>
+				<Button
+					color="primary"
+					variant="flat"
+					onPress={() => window.location.reload()}
+					startContent={<ReloadOutlined />}
+				>
+					重试
+				</Button>
 			</div>
 		);
 	}
 
-	if (!stats) return null;
+	if (loading || !stats) {
+		return <DashboardSkeleton />;
+	}
 
-		const todayChange =
+	const todayChange =
 		stats.yesterdaySessions > 0
 			? ((stats.todaySessions - stats.yesterdaySessions) /
 					stats.yesterdaySessions) *
-				100
+			  100
 			: stats.todaySessions > 0
-				? 100
-				: 0;
+			  ? 100
+			  : 0;
 
 	const weekChange =
 		stats.lastWeekSessions > 0
 			? ((stats.thisWeekSessions - stats.lastWeekSessions) /
 					stats.lastWeekSessions) *
-				100
+			  100
 			: stats.thisWeekSessions > 0
-				? 100
-				: 0;
+			  ? 100
+			  : 0;
 
-		const dailyData = (() => {
+	const dailyData = (() => {
 		const sessionMap = new Map(
 			stats.dailySessions.map((d) => [
 				new Date(d.date).toDateString(),
@@ -223,7 +312,7 @@ export default function Dashboard() {
 
 	const maxCalls = Math.max(...dailyData.map((d) => d.count), 1);
 
-		const totalModelCalls = stats.modelUsage.reduce((sum, m) => sum + m.count, 0);
+	const totalModelCalls = stats.modelUsage.reduce((sum, m) => sum + m.count, 0);
 	const modelUsageWithPercentage = stats.modelUsage.map((m) => ({
 		...m,
 		percentage: totalModelCalls > 0 ? (m.count / totalModelCalls) * 100 : 0,
@@ -231,141 +320,204 @@ export default function Dashboard() {
 
 	return (
 		<Fragment>
+			{/* Dashboard Header */}
+			<div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 fade-in">
+				<div>
+					<h1 className="text-2xl font-bold text-gray-800">
+						早安，管理员 <span className="text-2xl">👋</span>
+					</h1>
+					<p className="text-gray-500 mt-1 text-sm">
+						这是您今天的平台概览数据报告
+					</p>
+				</div>
+				<div className="flex items-center gap-3">
+					<RangePicker className="h-10 border-none bg-white rounded-xl shadow-sm hover:bg-gray-50" />
+					<Button
+						isIconOnly
+						className="bg-white shadow-sm text-gray-600 rounded-xl"
+						variant="flat"
+					>
+						<CloudDownloadOutlined className="text-lg" />
+					</Button>
+					<Button
+						color="primary"
+						className="shadow-md shadow-primary/20 rounded-xl font-medium"
+						startContent={<ReloadOutlined />}
+						onPress={() => window.location.reload()}
+					>
+						刷新数据
+					</Button>
+				</div>
+			</div>
+
 			<div className="space-y-6">
 				{/* Stats Cards */}
-<Row gutter={[16, 16]}>
-				<Col xs={24} sm={12} lg={6}>
-					<Card className="bg-gradient-to-br from-blue-50 to-white border-blue-100">
-							<CardBody className="py-4">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="text-sm text-gray-500 mb-1">总会话数</p>
-										<p className="text-2xl font-bold text-gray-800">
+				<Row gutter={[24, 24]}>
+					<Col xs={24} sm={12} xl={6}>
+						<Card className="rounded-2xl border-none shadow-sm hover:shadow-lg transition-shadow duration-300">
+							<CardBody className="p-6">
+								<div className="flex items-start justify-between">
+									<div className="space-y-2">
+										<p className="text-sm font-medium text-gray-500">总会话数</p>
+										<p className="text-3xl font-bold text-gray-800 tracking-tight">
 											{stats.totalSessions.toLocaleString()}
 										</p>
-										<div className="flex items-center mt-1 text-xs">
-											{weekChange >= 0 ? (
-												<span className="text-green-600 flex items-center">
-													<ArrowUpOutlined className="mr-1" />
-													较上周 +{weekChange.toFixed(0)}%
-												</span>
-											) : (
-												<span className="text-red-600 flex items-center">
-													<ArrowDownOutlined className="mr-1" />
-													较上周 {weekChange.toFixed(0)}%
-												</span>
-											)}
-										</div>
 									</div>
-									<div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-										<ThunderboltOutlined className="text-blue-600 text-xl" />
+									<div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shadow-sm">
+										<ThunderboltOutlined className="text-blue-500 text-xl" />
 									</div>
+								</div>
+								<div className="mt-4 flex items-center text-xs font-medium">
+									<div
+										className={`px-2 py-0.5 rounded-full flex items-center gap-1 ${
+											weekChange >= 0
+												? 'bg-green-50 text-green-600'
+												: 'bg-red-50 text-red-600'
+										}`}
+									>
+										{weekChange >= 0 ? (
+											<ArrowUpOutlined />
+										) : (
+											<ArrowDownOutlined />
+										)}
+										<span>{Math.abs(weekChange).toFixed(0)}%</span>
+									</div>
+									<span className="text-gray-400 ml-2">较上周</span>
 								</div>
 							</CardBody>
 						</Card>
-</Col>
-				<Col xs={24} sm={12} lg={6}>
-					<Card className="bg-gradient-to-br from-green-50 to-white border-green-100">
-							<CardBody className="py-4">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="text-sm text-gray-500 mb-1">今日会话</p>
-										<p className="text-2xl font-bold text-gray-800">
+					</Col>
+					<Col xs={24} sm={12} xl={6}>
+						<Card className="rounded-2xl border-none shadow-sm hover:shadow-lg transition-shadow duration-300">
+							<CardBody className="p-6">
+								<div className="flex items-start justify-between">
+									<div className="space-y-2">
+										<p className="text-sm font-medium text-gray-500">今日会话</p>
+										<p className="text-3xl font-bold text-gray-800 tracking-tight">
 											{stats.todaySessions}
 										</p>
-										<div className="flex items-center mt-1 text-xs">
-											{todayChange >= 0 ? (
-												<span className="text-green-600 flex items-center">
-													<ArrowUpOutlined className="mr-1" />
-													较昨日 +{todayChange.toFixed(0)}%
-												</span>
-											) : (
-												<span className="text-red-600 flex items-center">
-													<ArrowDownOutlined className="mr-1" />
-													较昨日 {todayChange.toFixed(0)}%
-												</span>
-											)}
-										</div>
 									</div>
-									<div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-										<ClockCircleOutlined className="text-green-600 text-xl" />
+									<div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center shadow-sm">
+										<ClockCircleOutlined className="text-green-500 text-xl" />
+									</div>
+								</div>
+								<div className="mt-4 flex items-center text-xs font-medium">
+									<div
+										className={`px-2 py-0.5 rounded-full flex items-center gap-1 ${
+											todayChange >= 0
+												? 'bg-green-50 text-green-600'
+												: 'bg-red-50 text-red-600'
+										}`}
+									>
+										{todayChange >= 0 ? (
+											<ArrowUpOutlined />
+										) : (
+											<ArrowDownOutlined />
+										)}
+										<span>{Math.abs(todayChange).toFixed(0)}%</span>
+									</div>
+									<span className="text-gray-400 ml-2">较昨日</span>
+								</div>
+							</CardBody>
+						</Card>
+					</Col>
+					<Col xs={24} sm={12} xl={6}>
+						<Card className="rounded-2xl border-none shadow-sm hover:shadow-lg transition-shadow duration-300">
+							<CardBody className="p-6">
+								<div className="flex items-start justify-between">
+									<div className="space-y-2">
+										<p className="text-sm font-medium text-gray-500">
+											Token 消耗
+										</p>
+										<p className="text-3xl font-bold text-gray-800 tracking-tight">
+											{(stats.totalTokens / 1000).toFixed(1)}k
+										</p>
+									</div>
+									<div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center shadow-sm">
+										<FireOutlined className="text-purple-500 text-xl" />
+									</div>
+								</div>
+								<div className="mt-4 flex items-center justify-between text-xs text-gray-400">
+									<div className="flex items-center gap-2">
+										<span className="w-2 h-2 rounded-full bg-purple-200" />
+										<span>输入: {(stats.promptTokens / 1000).toFixed(1)}k</span>
+									</div>
+									<div className="flex items-center gap-2">
+										<span className="w-2 h-2 rounded-full bg-purple-400" />
+										<span>
+											输出: {(stats.completionTokens / 1000).toFixed(1)}k
+										</span>
 									</div>
 								</div>
 							</CardBody>
 						</Card>
-</Col>
-				<Col xs={24} sm={12} lg={6}>
-					<Card className="bg-gradient-to-br from-purple-50 to-white border-purple-100">
-							<CardBody className="py-4">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="text-sm text-gray-500 mb-1">总 Token 消耗</p>
-										<p className="text-2xl font-bold text-gray-800">
-											{(stats.totalTokens / 1000).toFixed(1)}K
+					</Col>
+					<Col xs={24} sm={12} xl={6}>
+						<Card className="rounded-2xl border-none shadow-sm hover:shadow-lg transition-shadow duration-300">
+							<CardBody className="p-6">
+								<div className="flex items-start justify-between">
+									<div className="space-y-2">
+										<p className="text-sm font-medium text-gray-500">
+											请求成功率
 										</p>
-										<p className="text-xs text-gray-400 mt-1">
-											输入 {(stats.promptTokens / 1000).toFixed(1)}K / 输出{' '}
-											{(stats.completionTokens / 1000).toFixed(1)}K
+										<p className="text-3xl font-bold text-gray-800 tracking-tight">
+											{stats.successRate.toFixed(1)}%
 										</p>
 									</div>
-									<div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-										<FireOutlined className="text-purple-600 text-xl" />
+									<div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center shadow-sm">
+										<CheckCircleOutlined className="text-orange-500 text-xl" />
 									</div>
+								</div>
+								<div className="mt-4 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+									<div
+										className="bg-orange-400 h-1.5 rounded-full"
+										style={{ width: `${stats.successRate}%` }}
+									/>
 								</div>
 							</CardBody>
 						</Card>
-</Col>
-				<Col xs={24} sm={12} lg={6}>
-					<Card className="bg-gradient-to-br from-orange-50 to-white border-orange-100">
-						<CardBody className="py-4">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="text-sm text-gray-500 mb-1">成功率</p>
-									<p className="text-2xl font-bold text-gray-800">
-										{stats.successRate.toFixed(1)}%
-									</p>
-									<p className="text-xs text-gray-400 mt-1">
-										本月 {stats.monthSessions} 次会话
-									</p>
-								</div>
-								<div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-									<CheckCircleOutlined className="text-orange-600 text-xl" />
-								</div>
-							</div>
-						</CardBody>
-					</Card>
-				</Col>
+					</Col>
 				</Row>
 
-				<Row gutter={[16, 16]}>
+				<Row gutter={[24, 24]}>
 					{/* Sessions Chart */}
 					<Col xs={24} lg={16}>
-						<Card className="bg-gradient-to-br from-indigo-50 to-white border-indigo-100 shadow-sm">
-							<CardHeader className="flex justify-between items-center pb-2">
-								<h2 className="text-lg font-semibold text-gray-800">
-									会话趋势（近 7 天）
-								</h2>
-								<Chip size="sm" variant="flat" color="primary">
-									每周
-								</Chip>
+						<Card className="border-none shadow-sm rounded-2xl h-full">
+							<CardHeader className="px-6 pt-6 flex justify-between items-center">
+								<div>
+									<h2 className="text-lg font-bold text-gray-800">趋势分析</h2>
+									<p className="text-xs text-gray-400">近 7 天会话活跃度</p>
+								</div>
+								<Button
+									size="sm"
+									variant="light"
+									color="primary"
+									endContent={<ArrowDownOutlined className="text-xs" />}
+								>
+									导出 CSV
+								</Button>
 							</CardHeader>
-							<CardBody className="overflow-hidden">
+							<CardBody className="overflow-hidden px-2 pb-2">
 								{dailyData.length > 0 ? (
-									<div className="h-64 w-full relative">
+									<div className="h-80 w-full relative">
 										{(() => {
-											const height = 200;
-											const width = 1000; // Virtual width for SVG viewBox
+											const height = 300; // Increased internal height for better amplitude
+											const width = 1200;
 											const padding = 20;
 											const contentWidth = width - padding * 2;
 											const contentHeight = height - padding * 2;
 
+											// Use a minimum maxCalls to prevent flat lines on low data
+											const adjustedMaxCalls = Math.max(maxCalls, 5);
+
 											const points = dailyData.map((d, i) => ({
 												x:
-													padding + (i / (dailyData.length - 1)) * contentWidth,
+													padding +
+													(i / (dailyData.length - 1)) * contentWidth,
 												y:
 													padding +
 													contentHeight -
-													(d.count / maxCalls) * contentHeight,
+													(d.count / adjustedMaxCalls) * contentHeight,
 												value: d.count,
 												label: d.day,
 											}));
@@ -375,11 +527,9 @@ export default function Dashboard() {
 
 											return (
 												<svg
-													viewBox={`0 0 ${width} ${height + 30}`}
+													viewBox={`0 0 ${width} ${height + 40}`}
 													className="w-full h-full overflow-visible"
 													preserveAspectRatio="none"
-													role="img"
-													aria-label="Activity chart"
 												>
 													<defs>
 														<linearGradient
@@ -391,15 +541,24 @@ export default function Dashboard() {
 														>
 															<stop
 																offset="0%"
-																stopColor="#6366F1"
-																stopOpacity="0.3"
+																stopColor="#3B82F6"
+																stopOpacity="0.2"
 															/>
 															<stop
 																offset="100%"
-																stopColor="#6366F1"
+																stopColor="#3B82F6"
 																stopOpacity="0"
 															/>
 														</linearGradient>
+														<filter id="shadow" colorInterpolationFilters="sRGB">
+															<feDropShadow
+																dx="0"
+																dy="4"
+																stdDeviation="4"
+																floodColor="#3B82F6"
+																floodOpacity="0.3"
+															/>
+														</filter>
 													</defs>
 
 													{/* Grid lines */}
@@ -410,7 +569,7 @@ export default function Dashboard() {
 															y1={padding + contentHeight * t}
 															x2={width - padding}
 															y2={padding + contentHeight * t}
-															stroke="#E5E7EB"
+															stroke="#F3F4F6"
 															strokeDasharray="4 4"
 															strokeWidth="1"
 														/>
@@ -423,61 +582,65 @@ export default function Dashboard() {
 													<path
 														d={pathD}
 														fill="none"
-														stroke="#6366F1"
-														strokeWidth="3"
+														stroke="#3B82F6"
+														strokeWidth="4"
 														strokeLinecap="round"
 														strokeLinejoin="round"
+														filter="url(#shadow)"
 													/>
 
-													{/* Points and Labels */}
+													{/* Points and Tooltips */}
 													{points.map((p, _i) => (
 														<g key={`${p.x}-${p.y}`} className="group">
-															{/* Hover area for tooltip */}
 															<rect
-																x={p.x - 20}
+																x={p.x - 40}
 																y={0}
-																width={40}
+																width={80}
 																height={height}
 																fill="transparent"
 																className="cursor-pointer"
 															/>
+															
+															{/* Vertical Guide Line on Hover */}
+															<line
+																x1={p.x}
+																y1={padding}
+																x2={p.x}
+																y2={height}
+																stroke="#3B82F6"
+																strokeWidth="1"
+																strokeDasharray="4 4"
+																className="opacity-0 group-hover:opacity-40 transition-opacity"
+															/>
 
-															{/* Point */}
 															<circle
 																cx={p.x}
 																cy={p.y}
-																r="4"
-																className="fill-white stroke-indigo-500 stroke-2 transition-all duration-200"
-																style={{ transformOrigin: 'center' }}
-															/>
-															{/* Hover effect using SVG mask/filter or simpler inline style approach since Tailwind can't animate 'r' attribute directly effectively without plugin */}
-															<circle
-																cx={p.x}
-																cy={p.y}
-																r="6"
-																className="fill-white stroke-indigo-500 stroke-2 opacity-0 group-hover:opacity-100 transition-opacity"
-																pointerEvents="none"
+																r="5"
+																className="fill-white stroke-blue-500 stroke-[3px] transition-all duration-300 group-hover:r-7"
 															/>
 
-															{/* Tooltip */}
+															{/* Fancy Tooltip */}
 															<foreignObject
-																x={p.x - 40}
-																y={p.y - 45}
-																width="80"
-																height="40"
+																x={p.x - 50}
+																y={p.y - 60}
+																width="100"
+																height="50"
 																className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
 															>
-																<div className="bg-gray-800 text-white text-xs px-2 py-1 rounded text-center shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
-																	{p.value} 次
+																<div className="flex flex-col items-center justify-center">
+																	<div className="bg-gray-900/90 backdrop-blur text-white text-xs px-3 py-1.5 rounded-lg shadow-xl transform translate-y-2 group-hover:translate-y-0 transition-transform">
+																		<span className="font-bold">{p.value}</span> 次会话
+																	</div>
+																	<div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-900/90"></div>
 																</div>
 															</foreignObject>
 
-															{/* X-axis Label */}
 															<text
 																x={p.x}
-																y={height + 25}
+																y={height + 30}
 																textAnchor="middle"
-																className="text-xs fill-gray-500 font-medium"
+																className="text-xs fill-gray-400 font-medium"
 															>
 																{p.label}
 															</text>
@@ -488,8 +651,9 @@ export default function Dashboard() {
 										})()}
 									</div>
 								) : (
-									<div className="h-48 flex items-center justify-center text-gray-400">
-										暂无数据
+									<div className="h-64 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl m-4 border border-dashed border-gray-200">
+										<FieldTimeOutlined className="text-3xl mb-2 text-gray-300" />
+										<span>暂无活动数据</span>
 									</div>
 								)}
 							</CardBody>
@@ -498,28 +662,37 @@ export default function Dashboard() {
 
 					{/* Model Usage */}
 					<Col xs={24} lg={8}>
-						<Card className="h-full bg-gradient-to-br from-fuchsia-50 to-white border-fuchsia-100 shadow-sm">
-							<CardHeader className="pb-2">
-								<h2 className="text-lg font-semibold text-gray-800">
-									模型使用情况
-								</h2>
+						<Card className="h-full border-none shadow-sm rounded-2xl">
+							<CardHeader className="px-6 pt-6 pb-0">
+								<h2 className="text-lg font-bold text-gray-800">模型分布</h2>
 							</CardHeader>
-							<CardBody>
+							<CardBody className="p-6">
 								{modelUsageWithPercentage.length > 0 ? (
-									<div className="space-y-4">
+									<div className="space-y-5">
 										{modelUsageWithPercentage.map((model) => (
-											<div key={model.model}>
-												<div className="flex justify-between text-sm mb-1">
-													<span className="text-gray-700">{model.model}</span>
-													<span className="text-gray-500">
-														{model.count.toLocaleString()} 次
+											<div key={model.model} className="group">
+												<div className="flex justify-between text-sm mb-2">
+													<span className="font-medium text-gray-700 group-hover:text-primary transition-colors">
+														{model.model}
 													</span>
+													<div className="flex items-center gap-2">
+														<span className="text-gray-500 text-xs">
+															{(model.tokens / 1000).toFixed(0)}k tkns
+														</span>
+														<span className="font-bold text-gray-800">
+															{model.percentage.toFixed(0)}%
+														</span>
+													</div>
 												</div>
 												<Progress
 													value={model.percentage}
 													color={getModelColor(model.model)}
 													size="sm"
-													className="h-2"
+													className="h-2.5"
+													classNames={{
+														track: 'bg-gray-100',
+														indicator: 'transition-all duration-500 ease-out',
+													}}
 												/>
 											</div>
 										))}
@@ -534,26 +707,25 @@ export default function Dashboard() {
 					</Col>
 				</Row>
 
-				{/* Bottom Row: Language Stats, User Ranking, Activity Log */}
-				<Row gutter={[16, 16]}>
-					{/* Language Stats (Merged) */}
+				{/* Bottom Row */}
+				<Row gutter={[24, 24]}>
+					{/* Language Stats */}
 					<Col xs={24} lg={8}>
-						<Card className="h-full bg-gradient-to-br from-cyan-50 to-white border-cyan-100 shadow-sm">
-							<CardHeader className="pb-2">
-								<h2 className="text-lg font-semibold text-gray-800">
-									编程语言分布
-								</h2>
+						<Card className="h-full border-none shadow-sm rounded-2xl">
+							<CardHeader className="px-6 pt-6 flex justify-between items-center">
+								<h2 className="text-lg font-bold text-gray-800">热门语言</h2>
+								<Button size="sm" isIconOnly variant="light" className="text-gray-400">
+									<MoreOutlined />
+								</Button>
 							</CardHeader>
-							<CardBody>
+							<CardBody className="p-6">
 								{stats.languageUsage.length > 0 ? (
-									<div className="flex flex-col h-full gap-4">
-										{/* Donut Chart */}
-										<div className="relative w-40 h-40 mx-auto flex-shrink-0">
+									<div className="flex flex-col h-full gap-6">
+										<div className="relative w-48 h-48 mx-auto flex-shrink-0 group">
+											<div className="absolute inset-0 rounded-full border-8 border-gray-50"></div>
 											<svg
 												viewBox="0 0 100 100"
-												className="w-full h-full transform -rotate-90"
-												role="img"
-												aria-label="Language usage chart"
+												className="w-full h-full transform -rotate-90 drop-shadow-lg"
 											>
 												{(() => {
 													const total = stats.languageUsage.reduce(
@@ -584,66 +756,51 @@ export default function Dashboard() {
 																strokeWidth="12"
 																strokeDasharray={dashArray}
 																strokeDashoffset={dashOffset}
-																className="transition-all hover:opacity-80 cursor-pointer"
-															>
-																<title>
-																	{lang.language}: {lang.count} (
-																	{percentage.toFixed(1)}%)
-																</title>
-															</circle>
+																className="transition-all duration-300 hover:stroke-width-14 cursor-pointer hover:opacity-90"
+															/>
 														);
 													});
 												})()}
 											</svg>
 											<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-												<span className="text-2xl font-bold text-gray-800">
+												<span className="text-3xl font-black text-gray-800">
 													{stats.languageUsage.length}
 												</span>
-												<span className="text-xs text-gray-500">语言</span>
+												<span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+													LANGS
+												</span>
 											</div>
 										</div>
 
-										{/* List with Progress Bars */}
-										<div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3 max-h-60">
-											{stats.languageUsage.slice(0, 8).map((lang, index) => {
+										<div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 max-h-60 pr-2">
+											{stats.languageUsage.slice(0, 6).map((lang, index) => {
 												const total = stats.languageUsage.reduce(
 													(sum, l) => sum + l.count,
 													0,
 												);
 												const percentage = (lang.count / total) * 100;
 												return (
-													<div key={lang.language}>
-														<div className="flex justify-between text-xs mb-1">
-															<div className="flex items-center gap-1.5">
-																<div
-																	className="w-2 h-2 rounded-full"
-																	style={{
-																		backgroundColor: getLanguageColor(
-																			lang.language,
-																			index,
-																		),
-																	}}
-																/>
-																<span className="text-gray-700 font-medium">
-																	{lang.language}
-																</span>
-															</div>
-															<span className="text-gray-500">
-																{percentage.toFixed(1)}%
-															</span>
-														</div>
-														<div className="w-full bg-gray-100 rounded-full h-1.5">
+													<div
+														key={lang.language}
+														className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
+													>
+														<div className="flex items-center gap-3">
 															<div
-																className="h-1.5 rounded-full transition-all"
+																className="w-3 h-3 rounded-full ring-2 ring-white shadow-sm"
 																style={{
-																	width: `${percentage}%`,
 																	backgroundColor: getLanguageColor(
 																		lang.language,
 																		index,
 																	),
 																}}
 															/>
+															<span className="text-sm font-medium text-gray-700">
+																{lang.language}
+															</span>
 														</div>
+														<span className="text-sm text-gray-500 font-mono">
+															{percentage.toFixed(1)}%
+														</span>
 													</div>
 												);
 											})}
@@ -660,72 +817,63 @@ export default function Dashboard() {
 
 					{/* User Ranking */}
 					<Col xs={24} lg={8}>
-						<Card className="bg-gradient-to-br from-amber-50 to-white border-amber-100 shadow-sm h-full">
-							<CardHeader className="flex justify-between items-center pb-2">
-								<h2 className="text-lg font-semibold text-gray-800">
-									用户排行
-								</h2>
+						<Card className="h-full border-none shadow-sm rounded-2xl">
+							<CardHeader className="px-6 pt-6 flex justify-between items-center pb-2">
+								<h2 className="text-lg font-bold text-gray-800">活跃用户</h2>
 								<Chip
 									size="sm"
 									variant="flat"
 									color="warning"
 									startContent={<TrophyOutlined />}
+									className="px-2"
 								>
 									Top 10
 								</Chip>
 							</CardHeader>
-							<CardBody className="overflow-y-auto max-h-[450px] custom-scrollbar">
+							<CardBody className="overflow-y-auto max-h-[500px] custom-scrollbar p-0">
 								{stats.userRanking.length > 0 ? (
-									<div className="space-y-3">
+									<div className="divide-y divide-gray-100">
 										{stats.userRanking.map((user, index) => (
 											<div
 												key={user.userId}
-												className="flex items-center justify-between p-2.5 bg-white/60 border border-amber-100 rounded-lg hover:bg-white transition-all shadow-sm"
+												className="flex items-center justify-between p-4 hover:bg-amber-50/30 transition-colors"
 											>
-												<div className="flex items-center gap-2">
-													<div className="relative flex-shrink-0">
+												<div className="flex items-center gap-3">
+													<div className="relative">
 														<Avatar
-															size="sm"
+															size="md"
 															name={user.name}
-															className={
-																index === 0
-																	? 'bg-yellow-100 text-yellow-600'
-																	: index === 1
-																		? 'bg-gray-200 text-gray-600'
-																		: index === 2
-																			? 'bg-orange-100 text-orange-600'
-																			: 'bg-blue-100 text-blue-600'
-															}
+															src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+															className="ring-2 ring-white shadow-sm bg-gray-100"
 														/>
 														{index < 3 && (
-															<CrownOutlined
-																className={`absolute -top-2 -right-1 text-[10px] ${
+															<div
+																className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white text-[10px] shadow-sm ${
 																	index === 0
-																		? 'text-yellow-500'
+																		? 'bg-yellow-400 text-white'
 																		: index === 1
-																			? 'text-gray-400'
-																			: 'text-orange-400'
+																		  ? 'bg-gray-400 text-white'
+																		  : 'bg-orange-400 text-white'
 																}`}
-															/>
+															>
+																{index + 1}
+															</div>
 														)}
 													</div>
-													<div className="min-w-0">
-														<p className="font-medium text-gray-800 text-sm truncate max-w-[100px]">
+													<div>
+														<p className="font-semibold text-gray-800 text-sm">
 															{user.name}
 														</p>
-														<p className="text-[10px] text-gray-400 truncate max-w-[100px]">
-															{user.sessionCount} 次会话
+														<p className="text-xs text-gray-400">
+															{user.email}
 														</p>
 													</div>
 												</div>
-												<div className="text-right flex-shrink-0">
-													<Chip
-														size="sm"
-														variant="flat"
-														className="h-6 text-xs"
-													>
-														{(user.totalTokens / 1000).toFixed(0)}k
-													</Chip>
+												<div className="text-right">
+													<p className="font-bold text-gray-800">
+														{user.sessionCount}
+													</p>
+													<p className="text-[10px] text-gray-400">会话</p>
 												</div>
 											</div>
 										))}
@@ -741,44 +889,47 @@ export default function Dashboard() {
 
 					{/* Activity Log */}
 					<Col xs={24} lg={8}>
-						<Card className="bg-gradient-to-br from-slate-50 to-white border-slate-100 shadow-sm h-full">
-							<CardHeader className="flex justify-between items-center pb-2">
-								<h2 className="text-lg font-semibold text-gray-800">
-									最近会话
-								</h2>
-								<Button size="sm" variant="light" isIconOnly color="primary">
+						<Card className="h-full border-none shadow-sm rounded-2xl">
+							<CardHeader className="px-6 pt-6 flex justify-between items-center">
+								<h2 className="text-lg font-bold text-gray-800">最近活动</h2>
+								<Button size="sm" isIconOnly variant="light" className="text-gray-400">
 									<HistoryOutlined />
 								</Button>
 							</CardHeader>
-							<CardBody className="overflow-y-auto max-h-[450px] custom-scrollbar">
+							<CardBody className="overflow-y-auto max-h-[500px] custom-scrollbar p-6">
 								{stats.recentSessions.length > 0 ? (
 									<Timeline
 										className="mt-2"
 										items={stats.recentSessions.map((session) => ({
-											color: session.success ? 'green' : 'red',
+											color: session.success ? '#10B981' : '#EF4444',
 											dot: session.success ? (
-												<CheckCircleOutlined className="text-green-500 text-xs" />
+												<div className="w-3 h-3 bg-green-500 rounded-full ring-4 ring-green-100" />
 											) : (
-												<CloseCircleOutlined className="text-red-500 text-xs" />
+												<div className="w-3 h-3 bg-red-500 rounded-full ring-4 ring-red-100" />
 											),
 											children: (
-												<div className="pb-3 pl-1">
-													<div className="mb-1">
-														<span className="text-gray-800 text-sm font-medium line-clamp-2 leading-snug">
-															{session.userPrompt}
-														</span>
-													</div>
-													<div className="flex flex-wrap gap-1 mt-1.5">
-														<span className="text-[10px] px-1.5 py-0.5 bg-gray-100 rounded text-gray-500">
-															{session.model}
-														</span>
-														<span className="text-[10px] px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 flex items-center gap-1">
-															<FieldTimeOutlined />{' '}
-															{formatDuration(session.duration)}
-														</span>
-														<span className="text-[10px] text-gray-400 ml-auto">
+												<div className="pb-6 pl-2 group">
+													<div className="flex justify-between items-start mb-1">
+														<span className="text-[10px] text-gray-400 font-mono bg-gray-100 px-1.5 py-0.5 rounded">
 															{formatTimeAgo(session.timestamp)}
 														</span>
+														<span className="text-[10px] text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">
+															#{session.sessionId.slice(-4)}
+														</span>
+													</div>
+													<div className="bg-gray-50 rounded-xl p-3 border border-gray-100 group-hover:bg-white group-hover:shadow-sm transition-all">
+														<p className="text-gray-700 text-sm font-medium line-clamp-2 leading-relaxed mb-2">
+															{session.userPrompt}
+														</p>
+														<div className="flex items-center gap-2 mt-1">
+															<Chip size="sm" variant="flat" className="h-5 text-[10px] bg-white border border-gray-200">
+																{session.model}
+															</Chip>
+															<span className="text-[10px] text-gray-400 flex items-center gap-1">
+																<FieldTimeOutlined />
+																{formatDuration(session.duration)}
+															</span>
+														</div>
 													</div>
 												</div>
 											),
@@ -792,8 +943,8 @@ export default function Dashboard() {
 							</CardBody>
 						</Card>
 					</Col>
-</Row>
-		</div>
-	</Fragment>
+				</Row>
+			</div>
+		</Fragment>
 	);
 }
