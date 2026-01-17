@@ -1,17 +1,26 @@
-import { Elysia, t } from 'elysia';
+import { Elysia, t, type Static } from 'elysia';
 import prisma from '../lib/prisma.js';
-import { createAuthError } from '../middleware/auth.js';
+import { authMiddleware, createAuthError, withAuth } from '../middleware/auth.js';
+
+const profileBodySchema = t.Object({
+	name: t.Optional(t.String()),
+	image: t.Optional(t.String()),
+});
+
+type ProfileBody = Static<typeof profileBodySchema>;
 
 export const userRoutes = new Elysia({ prefix: '/api/users' })
+	.use(authMiddleware)
 	.patch(
 		'/profile',
-		async ({ user, body, set }) => {
+		async (ctx) => {
+			const { user, set } = withAuth(ctx);
 			if (!user) {
 				set.status = 401;
 				return createAuthError('请先登录');
 			}
 
-			const { name, image } = body as { name?: string; image?: string };
+			const { name, image } = ctx.body as ProfileBody;
 
 			const updatedUser = await prisma.user.update({
 				where: { id: user.userId },
@@ -31,32 +40,27 @@ export const userRoutes = new Elysia({ prefix: '/api/users' })
 			return { user: updatedUser };
 		},
 		{
-			body: t.Object({
-				name: t.Optional(t.String()),
-				image: t.Optional(t.String()),
-			}),
+			body: profileBodySchema,
 		},
 	)
-	.get(
-		'/stats',
-		async ({ user, set }) => {
-			if (!user) {
-				set.status = 401;
-				return createAuthError('请先登录');
-			}
+	.get('/stats', async (ctx) => {
+		const { user, set } = withAuth(ctx);
+		if (!user) {
+			set.status = 401;
+			return createAuthError('请先登录');
+		}
 
-			const [agentCount, conversationCount, sessionCount] = await Promise.all([
-				prisma.agent.count({ where: { userId: user.userId } }),
-				prisma.conversation.count({ where: { userId: user.userId } }),
-				prisma.agentSession.count({ where: { userId: user.userId } }),
-			]);
+		const [agentCount, conversationCount, sessionCount] = await Promise.all([
+			prisma.agent.count({ where: { userId: user.userId } }),
+			prisma.conversation.count({ where: { userId: user.userId } }),
+			prisma.agentSession.count({ where: { userId: user.userId } }),
+		]);
 
-			return {
-				stats: {
-					agents: agentCount,
-					conversations: conversationCount,
-					sessions: sessionCount,
-				},
-			};
-		},
-	);
+		return {
+			stats: {
+				agents: agentCount,
+				conversations: conversationCount,
+				sessions: sessionCount,
+			},
+		};
+	});
