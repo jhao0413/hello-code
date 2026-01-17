@@ -34,6 +34,8 @@ import {
 } from '@heroui/react';
 import { Col, Row, Timeline, DatePicker } from 'antd';
 import { Fragment, useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../utils/api';
 
 const { RangePicker } = DatePicker;
 
@@ -230,20 +232,26 @@ const DashboardSkeleton = () => (
 );
 
 export default function Dashboard() {
+	const { user } = useAuth();
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		fetch('/api/agent-sessions/stats')
-			.then((res) => {
-				if (!res.ok) throw new Error('Failed to fetch stats');
-				return res.json();
-			})
-			.then(setStats)
+		api.get('/agent-sessions/stats')
+			.then((res) => setStats(res.data))
 			.catch((err) => setError(err.message))
 			.finally(() => setLoading(false));
 	}, []);
+
+	const getGreeting = () => {
+		const hour = new Date().getHours();
+		if (hour < 5) return '夜深了';
+		if (hour < 12) return '早安';
+		if (hour < 14) return '中午好';
+		if (hour < 18) return '下午好';
+		return '晚上好';
+	};
 
 	if (error) {
 		return (
@@ -320,7 +328,7 @@ export default function Dashboard() {
 			<div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 fade-in">
 				<div>
 					<h1 className="text-2xl font-bold text-gray-800">
-						早安，管理员 <span className="text-2xl">👋</span>
+						{getGreeting()}，{user?.name || '管理员'} <span className="text-2xl">👋</span>
 					</h1>
 					<p className="text-gray-500 mt-1 text-sm">
 						这是您今天的平台概览数据报告

@@ -8,7 +8,8 @@ import {
 	UserOutlined,
 } from '@ant-design/icons';
 import { Avatar, Tooltip } from '@heroui/react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {
 	collapsed: boolean;
@@ -31,6 +32,13 @@ const navItems = [
 
 export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 	const location = useLocation();
+	const navigate = useNavigate();
+	const { user, logout } = useAuth();
+
+	const handleLogout = () => {
+		logout();
+		navigate('/login');
+	};
 
 	return (
 		<aside
@@ -100,12 +108,12 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 										{isActive && (
 											<div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-20" />
 										)}
-										
+
 										<span className="relative z-10">{item.icon}</span>
 										<span className="relative z-10 font-medium tracking-wide">
 											{item.label}
 										</span>
-										
+
 										{/* Hover Arrow */}
 										{!isActive && (
 											<div className="absolute right-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-300">
@@ -161,35 +169,40 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 					)}
 				</div>
 
-				{/* User Profile */}
+				{/* User Profile & Logout */}
 				<div className={`border-t border-gray-100 pt-4 ${collapsed ? 'flex justify-center' : ''}`}>
-					<div className={`flex items-center gap-3 group cursor-pointer p-2 rounded-xl hover:bg-gray-50 transition-colors ${collapsed ? 'justify-center' : ''}`}>
-						<div className="relative">
+					{collapsed ? (
+						<Tooltip content="退出登录" placement="right">
+							<button
+								onClick={handleLogout}
+								className="flex items-center justify-center w-12 h-12 mx-auto rounded-2xl text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all"
+							>
+								<LogoutOutlined className="text-lg" />
+							</button>
+						</Tooltip>
+					) : (
+						<div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors">
 							<Avatar
 								size="sm"
-								name="User"
+								name={user?.name || user?.email || 'U'}
+								src={user?.image}
 								className="bg-gradient-to-tr from-primary to-purple-500 text-white font-bold shadow-md shadow-primary/20 ring-2 ring-white"
 							/>
-							<div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
-						</div>
-						
-						{!collapsed && (
 							<div className="flex-1 min-w-0 overflow-hidden">
-								<p className="text-sm font-bold text-gray-800 truncate group-hover:text-primary transition-colors">
-									Admin User
+								<p className="text-sm font-bold text-gray-800 truncate">
+									{user?.name || '用户'}
 								</p>
-								<p className="text-xs text-gray-400 truncate flex items-center gap-1">
-									<span>Pro Plan</span>
-									<span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-									<span>在线</span>
-								</p>
+								<p className="text-xs text-gray-400 truncate">{user?.email}</p>
 							</div>
-						)}
-						
-						{!collapsed && (
-							<LogoutOutlined className="text-gray-400 hover:text-red-500 transition-colors" />
-						)}
-					</div>
+							<button
+								onClick={handleLogout}
+								className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+								title="退出登录"
+							>
+								<LogoutOutlined className="text-lg" />
+							</button>
+						</div>
+					)}
 				</div>
 			</div>
 		</aside>

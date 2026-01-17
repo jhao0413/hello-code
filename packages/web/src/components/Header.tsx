@@ -3,15 +3,51 @@ import {
 	SearchOutlined,
 	QuestionCircleOutlined,
 	GithubOutlined,
+	UserOutlined,
+	LogoutOutlined,
+	SettingOutlined,
 } from '@ant-design/icons';
-import { Button, Badge } from '@heroui/react';
+import { Button, Badge, Dropdown, Avatar, Menu } from '@heroui/react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {
 	title: string;
 	collapsed: boolean;
 }
 
-export function Header({ title, collapsed }: HeaderProps) {
+export function Header({ title }: HeaderProps) {
+	const { user, logout } = useAuth();
+	const navigate = useNavigate();
+
+	const handleLogout = () => {
+		logout();
+		navigate('/login');
+	};
+
+	const userMenuItems = [
+		{
+			key: 'profile',
+			label: '个人资料',
+			icon: <UserOutlined />,
+		},
+		{
+			key: 'settings',
+			label: '设置',
+			icon: <SettingOutlined />,
+		},
+		{
+			type: 'divider' as const,
+		},
+		{
+			key: 'logout',
+			label: '退出登录',
+			icon: <LogoutOutlined />,
+			color: 'danger',
+			onClick: handleLogout,
+		},
+	];
+
 	return (
 		<header
 			className={`sticky top-0 z-40 h-20 px-8 flex items-center justify-between
@@ -53,7 +89,7 @@ export function Header({ title, collapsed }: HeaderProps) {
 					>
 						<GithubOutlined className="text-lg" />
 					</Button>
-					
+
 					<Button
 						isIconOnly
 						variant="light"
@@ -71,6 +107,33 @@ export function Header({ title, collapsed }: HeaderProps) {
 							<BellOutlined className="text-lg" />
 						</Badge>
 					</Button>
+
+					<div className="h-8 w-px bg-gray-200 mx-2"></div>
+
+					{/* User Menu */}
+					<Dropdown placement="bottom-end">
+						<Button variant="light" className="p-0 min-w-0 h-auto bg-transparent">
+							<Avatar
+								isBordered
+								color="primary"
+								name={user?.name || user?.email || 'U'}
+								size="sm"
+								src={user?.image}
+							/>
+						</Button>
+						<Menu
+							items={userMenuItems}
+							className="w-48"
+							itemClasses={{
+								base: [
+									'px-3 py-2 rounded-lg',
+									'data-[hover=true]:bg-gray-100',
+									'data-[selected=true]:bg-primary/10',
+									'data-[danger=true]:text-danger',
+								],
+							}}
+						/>
+					</Dropdown>
 				</div>
 			</div>
 		</header>
