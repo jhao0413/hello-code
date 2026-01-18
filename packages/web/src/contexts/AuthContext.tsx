@@ -27,13 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	const fetchUser = useCallback(async () => {
-		const token = authService.getAccessToken();
-		if (!token) {
-			setIsInitialized(true);
-			return;
-		}
-
 		try {
+			await authService.refresh();
 			const { user: userData } = await authService.getCurrentUser();
 			setUser(userData);
 		} catch {

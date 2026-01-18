@@ -918,12 +918,12 @@ export default function Dashboard() {
 															{formatTimeAgo(session.timestamp)}
 														</span>
 														<span className="text-[10px] text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">
-															#{session.sessionId.slice(-4)}
+															#{session.session_id.slice(-4)}
 														</span>
 													</div>
 													<div className="bg-gray-50 rounded-xl p-3 border border-gray-100 group-hover:bg-white group-hover:shadow-sm transition-all">
 														<p className="text-gray-700 text-sm font-medium line-clamp-2 leading-relaxed mb-2">
-															{session.userPrompt}
+															{session.user_prompt}
 														</p>
 														<div className="flex items-center gap-2 mt-1">
 															<Chip size="sm" variant="flat" className="h-5 text-[10px] bg-white border border-gray-200">

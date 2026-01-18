@@ -1,6 +1,7 @@
 import { Elysia, t, type Static } from 'elysia';
 import prisma from '../lib/prisma.js';
-import { authMiddleware, createAuthError, withAuth } from '../middleware/auth.js';
+import { type AccessPayload } from '../lib/auth.js';
+import { createAuthError, requireAuth } from '../lib/auth-helper.js';
 
 const profileBodySchema = t.Object({
 	name: t.Optional(t.String()),
@@ -9,58 +10,65 @@ const profileBodySchema = t.Object({
 
 type ProfileBody = Static<typeof profileBodySchema>;
 
+type AuthenticatedContext = {
+	user: AccessPayload;
+};
+
 export const userRoutes = new Elysia({ prefix: '/api/users' })
-	.use(authMiddleware)
 	.patch(
 		'/profile',
 		async (ctx) => {
-			const { user, set } = withAuth(ctx);
-			if (!user) {
-				set.status = 401;
-				return createAuthError('请先登录');
-			}
+			const result = await requireAuth(ctx, async (authCtx) => {
+				const { name, image } = ctx.body as ProfileBody;
 
-			const { name, image } = ctx.body as ProfileBody;
+				const updatedUser = await prisma.user.update({
+					where: { id: authCtx.user.userId },
+					data: {
+						name,
+						image,
+					},
+					select: {
+						id: true,
+						email: true,
+						name: true,
+						image: true,
+						created_at: true,
+					},
+				});
 
-			const updatedUser = await prisma.user.update({
-				where: { id: user.userId },
-				data: {
-					name,
-					image,
-				},
-				select: {
-					id: true,
-					email: true,
-					name: true,
-					image: true,
-					created_at: true,
-				},
+				return { response: { user: updatedUser } };
 			});
 
-			return { user: updatedUser };
+			if (result.status) {
+				ctx.set.status = result.status as 401;
+			}
+			return result.response;
 		},
 		{
 			body: profileBodySchema,
 		},
 	)
 	.get('/stats', async (ctx) => {
-		const { user, set } = withAuth(ctx);
-		if (!user) {
-			set.status = 401;
-			return createAuthError('请先登录');
+		const result = await requireAuth(ctx, async (authCtx) => {
+			const [agentCount, conversationCount, sessionCount] = await Promise.all([
+				prisma.agent.count({ where: { userId: authCtx.user.userId } }),
+				prisma.conversation.count({ where: { userId: authCtx.user.userId } }),
+				prisma.agentSession.count({ where: { userId: authCtx.user.userId } }),
+			]);
+
+			return {
+				response: {
+					stats: {
+						agents: agentCount,
+						conversations: conversationCount,
+						sessions: sessionCount,
+					},
+				},
+			};
+		});
+
+		if (result.status) {
+			ctx.set.status = result.status as 401;
 		}
-
-		const [agentCount, conversationCount, sessionCount] = await Promise.all([
-			prisma.agent.count({ where: { userId: user.userId } }),
-			prisma.conversation.count({ where: { userId: user.userId } }),
-			prisma.agentSession.count({ where: { userId: user.userId } }),
-		]);
-
-		return {
-			stats: {
-				agents: agentCount,
-				conversations: conversationCount,
-				sessions: sessionCount,
-			},
-		};
+		return result.response;
 	});

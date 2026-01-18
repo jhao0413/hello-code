@@ -45,6 +45,7 @@ export const authService = {
 		const response = await fetch(`${API_BASE}/auth/login`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify(params),
 		});
 
@@ -64,6 +65,7 @@ export const authService = {
 		const response = await fetch(`${API_BASE}/auth/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify(params),
 		});
 
@@ -86,6 +88,7 @@ export const authService = {
 		});
 
 		if (!response.ok) {
+			this.clearAccessToken();
 			throw new Error('Token 刷新失败');
 		}
 
@@ -110,6 +113,7 @@ export const authService = {
 			headers: {
 				Authorization: `Bearer ${this.getAccessToken()}`,
 			},
+			credentials: 'include',
 		});
 
 		if (!response.ok) {
@@ -126,6 +130,7 @@ export const authService = {
 				'Content-Type': 'application/json',
 				Authorization: `Bearer ${this.getAccessToken()}`,
 			},
+			credentials: 'include',
 			body: JSON.stringify(data),
 		});
 
@@ -141,6 +146,7 @@ export const authService = {
 			headers: {
 				Authorization: `Bearer ${this.getAccessToken()}`,
 			},
+			credentials: 'include',
 		});
 
 		if (!response.ok) {

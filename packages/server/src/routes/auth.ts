@@ -8,7 +8,7 @@ import {
 	verifyRefreshToken,
 	type AccessPayload,
 } from '../lib/auth.js';
-import { createAuthError } from '../middleware/auth.js';
+import { createAuthError, requireAuth } from '../lib/auth-helper.js';
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
@@ -65,7 +65,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 				secure: process.env.NODE_ENV === 'production',
 				sameSite: 'lax',
 				maxAge: COOKIE_MAX_AGE,
-				path: '/api/auth/refresh',
+				path: '/',
 			});
 
 			return {
@@ -123,7 +123,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 				secure: process.env.NODE_ENV === 'production',
 				sameSite: 'lax',
 				maxAge: COOKIE_MAX_AGE,
-				path: '/api/auth/refresh',
+				path: '/',
 			});
 
 			return {
@@ -182,29 +182,33 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 	)
 	.get(
 		'/me',
-		async ({ user, set }) => {
-			if (!user) {
-				set.status = 401;
-				return createAuthError('请先登录');
-			}
+		async (ctx) => {
+			const result = await requireAuth(ctx, async (authCtx) => {
+				const dbUser = await prisma.user.findUnique({
+					where: { id: authCtx.user.userId },
+					select: {
+						id: true,
+						email: true,
+						name: true,
+						image: true,
+						created_at: true,
+						email_verified: true,
+					},
+				});
 
-			const dbUser = await prisma.user.findUnique({
-				where: { id: user.userId },
-				select: {
-					id: true,
-					email: true,
-					name: true,
-					image: true,
-					created_at: true,
-					email_verified: true,
-				},
+				if (!dbUser) {
+					return {
+						response: createAuthError('用户不存在'),
+						status: 401,
+					};
+				}
+
+				return { response: { user: dbUser } };
 			});
 
-			if (!dbUser) {
-				set.status = 401;
-				return createAuthError('用户不存在');
+			if (result.status) {
+				ctx.set.status = result.status as 401;
 			}
-
-			return { user: dbUser };
+			return result.response;
 		},
 	);
