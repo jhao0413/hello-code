@@ -2,6 +2,8 @@
 
 A full-stack application for managing and interacting with AI code agents.
 
+English | [简体中文](./README.zh-CN.md)
+
 ## Tech Stack
 
 ### Frontend
@@ -53,21 +55,23 @@ hello-code/
 │   │   │   ├── utils/
 │   │   │   └── styles/
 │   │   └── ...
-│   └── server/                   # Backend Elysia application
-│       ├── src/
-│       │   ├── routes/
-│       │   │   ├── agents.ts
-│       │   │   ├── conversations.ts
-│       │   │   ├── chat.ts
-│       │   │   └── agent-sessions.ts
-│       │   ├── services/
-│       │   ├── middleware/
-│       │   ├── lib/
-│       │   │   └── prisma.ts
-│       │   └── index.ts
-│       └── prisma/
-│           ├── schema.prisma
-│           └── migrations/
+│   ├── server/                   # Backend Elysia application
+│   │   ├── src/
+│   │   │   ├── routes/
+│   │   │   │   ├── agents.ts
+│   │   │   │   ├── conversations.ts
+│   │   │   │   ├── chat.ts
+│   │   │   │   └── agent-sessions.ts
+│   │   │   ├── services/
+│   │   │   ├── middleware/
+│   │   │   ├── lib/
+│   │   │   │   └── prisma.ts
+│   │   │   └── index.ts
+│   │   └── prisma/
+│   │       ├── schema.prisma
+│   │       └── migrations/
+│   └── neovate-code/             # Neovate Code fork (二次开发)
+│       └── (Fork from neovateai/neovate-code)
 └── package.json                  # Workspace root
 ```
 
@@ -182,6 +186,92 @@ NODE_ENV=development
 - Anthropic Claude (claude-3-sonnet, claude-3-opus, claude-3-haiku)
 - OpenAI GPT (gpt-4, gpt-4-turbo, gpt-3.5-turbo)
 - DeepSeek (deepseek-chat, deepseek-coder)
+
+## Neovate Code Development
+
+This project includes a fork of [neovateai/neovate-code](https://github.com/neovateai/neovate-code) in `packages/neovate-code/` as a Git submodule for custom development.
+
+### Initial Setup
+
+When cloning this repository, initialize the submodules:
+
+```bash
+# Clone with submodules
+git clone --recurse-submodules <repository-url>
+
+# Or if already cloned, initialize submodules
+git submodule update --init --recursive
+```
+
+### Git Configuration
+
+The neovate-code submodule is configured with dual remotes:
+- **origin**: Your fork at `git@github.com:jhao0413/neovate-code.git` (for custom changes)
+- **upstream**: Original repository at `git@github.com:neovateai/neovate-code.git` (for syncing updates)
+
+### Syncing with Upstream
+
+To pull the latest changes from the original repository:
+
+```bash
+cd packages/neovate-code
+
+# Fetch updates from original repository
+git fetch upstream
+
+# Merge into your local branch
+git merge upstream/main
+
+# Push to your fork
+git push origin main
+
+# Update the submodule reference in the main repository
+cd ../..
+git add packages/neovate-code
+git commit -m "chore: update neovate-code submodule"
+```
+
+### Custom Development Workflow
+
+1. **Create a feature branch**:
+```bash
+cd packages/neovate-code
+git checkout -b feat/your-feature
+```
+
+2. **Make your changes and commit**:
+```bash
+git add .
+git commit -m "feat: your changes"
+```
+
+3. **Push to your fork**:
+```bash
+git push origin feat/your-feature
+```
+
+4. **Update main repository to reference your changes**:
+```bash
+cd ../..
+git add packages/neovate-code
+git commit -m "chore: update neovate-code to latest"
+```
+
+### Pulling Latest Submodule Changes
+
+When other team members update the submodule:
+
+```bash
+# Pull main repository changes
+git pull
+
+# Update submodules to match the referenced commit
+git submodule update --remote --merge
+```
+
+### Contributing Back to Upstream
+
+If your changes would benefit the original project, you can create a Pull Request from your fork (`jhao0413/neovate-code`) to the original repository (`neovateai/neovate-code`).
 
 ## License
 

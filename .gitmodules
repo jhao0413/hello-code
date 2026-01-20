@@ -1,0 +1,3 @@
+[submodule "packages/neovate-code"]
+	path = packages/neovate-code
+	url = git@github.com:jhao0413/neovate-code.git
