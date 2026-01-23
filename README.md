@@ -70,8 +70,15 @@ hello-code/
 │   │   └── prisma/
 │   │       ├── schema.prisma
 │   │       └── migrations/
-│   └── neovate-code/             # Neovate Code fork (二次开发)
-│       └── (Fork from neovateai/neovate-code)
+│   ├── neovate-code/             # Neovate Code fork (二次开发)
+│   │   └── (Fork from neovateai/neovate-code)
+│   └── hello-agent/              # Custom Neovate-based agent (插件式扩展)
+│       ├── src/
+│       │   ├── index.ts          # Entry point
+│       │   ├── plugins/          # Custom plugins
+│       │   ├── agents/           # Custom agents
+│       │   └── tools/            # Custom tools
+│       └── package.json
 └── package.json                  # Workspace root
 ```
 
@@ -132,11 +139,13 @@ This will start:
 - `bun run dev` - Start both frontend and backend in development mode
 - `bun run dev:web` - Start frontend only
 - `bun run dev:server` - Start backend only
+- `bun run dev:agent` - Start custom agent (hello-agent)
 
 ### Build
 - `bun run build` - Build both packages
 - `bun run build:web` - Build frontend only
 - `bun run build:server` - Build backend only
+- `bun run build:agent` - Build custom agent
 
 ### Database
 - `bun run db:push` - Push schema to database (development)
@@ -190,6 +199,127 @@ NODE_ENV=development
 ## Neovate Code Development
 
 This project includes a fork of [neovateai/neovate-code](https://github.com/neovateai/neovate-code) in `packages/neovate-code/` as a Git submodule for custom development.
+
+### Hello Agent (Recommended)
+
+For most customizations, use the **hello-agent** package which provides a plugin-based extension system without modifying the upstream code.
+
+#### Development (Local Workspace)
+
+In local development, hello-agent uses the local neovate-code workspace:
+
+```bash
+# Start development
+bun run dev:agent
+```
+
+The `package.json` uses `"@neovate/code": "workspace:*"` to reference the local package.
+
+#### Publishing to npm
+
+When publishing hello-agent to npm, update the dependency:
+
+```json
+{
+  "dependencies": {
+    "@neovate/code": ">=0.25.0"  // Use published version instead of workspace:*
+  }
+}
+```
+
+Then build and publish:
+
+```bash
+bun run build
+cd packages/hello-agent
+bun publish
+```
+
+Users can then install and use your agent:
+
+```bash
+npx hello-agent
+```
+
+#### Plugin Extension Points
+
+| Hook | Purpose |
+|------|---------|
+| `config` | Modify default configuration (model, systemPrompt, etc.) |
+| `provider` | Add custom LLM providers |
+| `tool` | Add custom tools |
+| `slashCommand` | Add slash commands |
+| `agent` | Add custom agents |
+| `systemPrompt` | Modify system prompt |
+| `toolResult` | Process tool results |
+
+#### Directory Structure
+
+```
+packages/hello-agent/
+├── src/
+│   ├── index.ts              # Entry point using runNeovate()
+│   ├── plugins/              # Custom plugins
+│   │   └── my-plugin.ts
+│   ├── agents/               # Custom agent definitions
+│   │   └── index.ts
+│   └── tools/                # Custom tools
+│       └── index.ts
+└── package.json
+```
+
+#### Example Plugin
+
+```typescript
+import type { Plugin } from '@neovate/code';
+
+export const myPlugin: Plugin = {
+  name: 'my-plugin',
+  
+  config({ config, argvConfig }) {
+    return {
+      model: argvConfig.model || config.model || 'claude-sonnet-4-5',
+    };
+  },
+
+  tool: async (opts) => {
+    return [{
+      name: 'my_custom_tool',
+      description: 'A custom tool',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          input: { type: 'string', description: 'Input' }
+        },
+        required: ['input']
+      }
+    }];
+  },
+
+  slashCommand: async () => [],
+
+  agent: async () => [],
+};
+```
+
+Then pass it to `runNeovate()`:
+
+```typescript
+import { runNeovate } from '@neovate/code';
+import { myPlugin } from './plugins/my-plugin';
+
+runNeovate({
+  productName: 'My Agent',
+  version: '1.0.0',
+  plugins: [myPlugin],
+}).catch(console.error);
+```
+
+### Direct Neovate Code Modification
+
+### Direct Neovate Code Modification
+
+Only modify `packages/neovate-code/` when the plugin system doesn't expose the required functionality.
 
 ### Initial Setup
 

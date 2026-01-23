@@ -7,7 +7,15 @@ import {
 	LogoutOutlined,
 	SettingOutlined,
 } from '@ant-design/icons';
-import { Button, Badge, Dropdown, Avatar, Menu } from '@heroui/react';
+import {
+	Button,
+	Badge,
+	Dropdown,
+	DropdownTrigger,
+	DropdownMenu,
+	DropdownItem,
+	Avatar,
+} from '@heroui/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -24,29 +32,6 @@ export function Header({ title }: HeaderProps) {
 		logout();
 		navigate('/login');
 	};
-
-	const userMenuItems = [
-		{
-			key: 'profile',
-			label: '个人资料',
-			icon: <UserOutlined />,
-		},
-		{
-			key: 'settings',
-			label: '设置',
-			icon: <SettingOutlined />,
-		},
-		{
-			type: 'divider' as const,
-		},
-		{
-			key: 'logout',
-			label: '退出登录',
-			icon: <LogoutOutlined />,
-			color: 'danger',
-			onClick: handleLogout,
-		},
-	];
 
 	return (
 		<header
@@ -112,27 +97,34 @@ export function Header({ title }: HeaderProps) {
 
 					{/* User Menu */}
 					<Dropdown placement="bottom-end">
-						<Button variant="light" className="p-0 min-w-0 h-auto bg-transparent">
-							<Avatar
-								isBordered
-								color="primary"
-								name={user?.name || user?.email || 'U'}
-								size="sm"
-								src={user?.image}
-							/>
-						</Button>
-						<Menu
-							items={userMenuItems}
-							className="w-48"
-							itemClasses={{
-								base: [
-									'px-3 py-2 rounded-lg',
-									'data-[hover=true]:bg-gray-100',
-									'data-[selected=true]:bg-primary/10',
-									'data-[danger=true]:text-danger',
-								],
-							}}
-						/>
+						<DropdownTrigger>
+							<Button variant="light" className="p-0 min-w-0 h-auto bg-transparent">
+								<Avatar
+									isBordered
+									color="primary"
+									name={user?.name || user?.email || 'U'}
+									size="sm"
+									src={user?.image}
+								/>
+							</Button>
+						</DropdownTrigger>
+						<DropdownMenu aria-label="User Actions" variant="flat">
+							<DropdownItem key="profile" startContent={<UserOutlined />}>
+								个人资料
+							</DropdownItem>
+							<DropdownItem key="settings" startContent={<SettingOutlined />}>
+								设置
+							</DropdownItem>
+							<DropdownItem key="divider" className="h-px bg-gray-200 my-1 p-0" />
+							<DropdownItem
+								key="logout"
+								color="danger"
+								startContent={<LogoutOutlined />}
+								onPress={handleLogout}
+							>
+								退出登录
+							</DropdownItem>
+						</DropdownMenu>
 					</Dropdown>
 				</div>
 			</div>

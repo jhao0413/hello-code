@@ -42,7 +42,7 @@ api.interceptors.response.use(
 					const { access_token } = await authService.refresh();
 					authService.setAccessToken(access_token);
 
-					failedRequestsQueue.forEach(({ resolve }) => resolve(accessToken));
+					failedRequestsQueue.forEach(({ resolve }) => resolve(access_token));
 					failedRequestsQueue = [];
 
 					originalRequest.headers.Authorization = `Bearer ${access_token}`;

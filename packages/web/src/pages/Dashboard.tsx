@@ -1,14 +1,11 @@
 import {
 	ArrowDownOutlined,
 	ArrowUpOutlined,
-	CalendarOutlined,
 	CheckCircleOutlined,
 	ClockCircleOutlined,
 	CloseCircleOutlined,
 	CloudDownloadOutlined,
-	CrownOutlined,
-	EllipsisOutlined,
-	FieldTimeOutlined,
+	CopyOutlined,
 	FireOutlined,
 	HistoryOutlined,
 	MoreOutlined,
@@ -17,6 +14,8 @@ import {
 	TrophyOutlined,
 	UserOutlined,
 } from '@ant-design/icons';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import {
 	Avatar,
 	Button,
@@ -24,20 +23,497 @@ import {
 	CardBody,
 	CardHeader,
 	Chip,
-	Dropdown,
-	DropdownItem,
-	DropdownMenu,
-	DropdownTrigger,
+	Modal,
+	ModalBody,
+	ModalContent,
+	ModalHeader,
 	Progress,
 	Skeleton,
-	User,
 } from '@heroui/react';
-import { Col, Row, Timeline, DatePicker } from 'antd';
+import { MultiFileDiff } from '@pierre/diffs/react';
+import { Col, Row, Timeline, DatePicker, Tooltip } from 'antd';
 import { Fragment, useEffect, useState } from 'react';
+import {
+	Area,
+	AreaChart,
+	CartesianGrid,
+	Cell,
+	Legend,
+	Pie,
+	PieChart,
+	ResponsiveContainer,
+	Tooltip as RechartsTooltip,
+	XAxis,
+	YAxis,
+} from 'recharts';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../utils/api';
 
 const { RangePicker } = DatePicker;
+
+// Mock Data
+const mockStats: DashboardStats = {
+	totalSessions: 12580,
+	todaySessions: 142,
+	yesterdaySessions: 128,
+	thisWeekSessions: 856,
+	lastWeekSessions: 790,
+	monthSessions: 3420,
+	totalTokens: 15600000,
+	promptTokens: 6500000,
+	completionTokens: 9100000,
+	successRate: 98.5,
+	modelUsage: [
+		{ model: 'GLM-4.7', count: 450, tokens: 5000000 },
+		{ model: 'MiniMax M2', count: 320, tokens: 3000000 },
+		{ model: 'Kimi k2', count: 280, tokens: 2000000 },
+		{ model: 'DeepSeek', count: 150, tokens: 1000000 },
+	],
+	dailySessions: Array.from({ length: 7 }, (_, i) => ({
+		date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString(),
+		count: 100 + Math.floor(Math.random() * 100),
+	})),
+	recentSessions: Array.from({ length: 10 }, (_, i) => ({
+		id: `session-${i}`,
+		session_id: `sess_${Math.random().toString(36).substr(2, 9)}`,
+		userName: ['张三', '李四', '王五', '赵六', '钱七'][i % 5],
+		model: ['GLM-4.7', 'MiniMax M2', 'deepseek-coder'][i % 3],
+		messages: i % 2 === 0 ? [
+			{
+				role: 'user',
+				content: ['优化这个组件', '解释这段错误日志', '生成单元测试', '优化 SQL 查询', '如何实现防抖函数'][i % 5]
+			},
+			{
+				role: 'assistant',
+				content: i % 5 === 0
+					? `这是一个优化后的组件实现，使用了 React Hooks 和性能优化技巧：
+
+\`\`\`typescript
+import { memo, useCallback } from 'react';
+
+interface OptimizedComponentProps {
+  data: string[];
+  onUpdate: (id: string) => void;
+}
+
+export const OptimizedComponent = memo(({ data, onUpdate }: OptimizedComponentProps) => {
+  const handleUpdate = useCallback((id: string) => {
+    onUpdate(id);
+  }, [onUpdate]);
+
+  return (
+    <div className="space-y-2">
+      {data.map((item, index) => (
+        <div key={index} onClick={() => handleUpdate(item)}>
+          {item}
+        </div>
+      ))}
+    </div>
+  );
+});
+\`\`\`
+
+主要优化点：
+1. 使用 \`memo\` 避免不必要的重渲染
+2. 使用 \`useCallback\` 稳定函数引用
+3. 添加明确的类型注解`
+					: i % 5 === 1
+					? `这个错误日志表明数据库连接超时，建议检查：
+
+\`\`\`javascript
+// 常见的连接池配置
+module.exports = {
+  database: {
+    pool: {
+      max: 10,
+      min: 2,
+      acquire: 30000,
+      idle: 10000
+    },
+    timeout: 5000
+  }
+};
+\`\`\`
+
+排查步骤：
+1. 检查网络连接是否稳定
+2. 增加连接池超时时间
+3. 监控数据库服务器负载
+4. 考虑添加重试机制`
+					: i % 5 === 2
+					? `以下是为您生成的完整单元测试，覆盖了所有边界情况：
+
+\`\`\`typescript
+describe('UserService', () => {
+  let service: UserService;
+  let mockRepo: jest.Mocked<UserRepository>;
+
+  beforeEach(() => {
+    mockRepo = {
+      findById: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn()
+    };
+    service = new UserService(mockRepo);
+  });
+
+  it('should return user when found', async () => {
+    const user = { id: '1', name: 'John' };
+    mockRepo.findById.mockResolvedValue(user);
+
+    const result = await service.getUser('1');
+    expect(result).toEqual(user);
+  });
+
+  it('should throw error when user not found', async () => {
+    mockRepo.findById.mockResolvedValue(null);
+
+    await expect(service.getUser('999')).rejects.toThrow('User not found');
+  });
+
+  it('should validate input', async () => {
+    await expect(service.getUser('')).rejects.toThrow('Invalid ID');
+  });
+});
+\`\`\``
+					: i % 5 === 3
+					? `这个 SQL 查询可以通过添加索引和优化 JOIN 顺序来提升性能：
+
+\`\`\`sql
+-- 原查询
+SELECT u.name, o.amount, p.title
+FROM users u
+JOIN orders o ON u.id = o.user_id
+JOIN products p ON o.product_id = p.id
+WHERE u.status = 'active';
+
+-- 优化后
+CREATE INDEX idx_users_status ON users(status);
+CREATE INDEX idx_orders_user_id ON orders(user_id);
+
+SELECT u.name, o.amount, p.title
+FROM users u
+INDEXED BY idx_users_status
+JOIN orders o INDEXED BY idx_orders_user_id ON u.id = o.user_id
+JOIN products p ON o.product_id = p.id
+WHERE u.status = 'active';
+\`\`\`
+
+性能提升约 40-60%`
+					: `防抖函数的实现非常简单，这里提供两种方式：
+
+\`\`\`typescript
+// 方式一：使用 Lodash
+import { debounce } from 'lodash';
+
+const search = debounce((query: string) => {
+  console.log('Searching for:', query);
+}, 500);
+
+// 方式二：原生实现
+function debouce<T extends (...args: any[]) => any>(
+  fn: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: NodeJS.Timeout;
+
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+}
+
+const search = debouce((query: string) => {
+  console.log('Searching for:', query);
+}, 500);
+\`\`\`
+
+推荐使用 Lodash 的实现，它经过充分测试且功能更完善。`
+			}
+		] : [
+			{
+				role: 'user',
+				content: '帮我写一个 React 计数器组件'
+			},
+			{
+				role: 'assistant',
+				content: `这是一个基础的 React 计数器组件：
+
+\`\`\`tsx
+import { useState } from 'react';
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+      <button onClick={() => setCount(count - 1)}>Decrement</button>
+    </div>
+  );
+}
+\`\`\``
+			},
+			{
+				role: 'user',
+				content: '能添加重置功能吗？'
+			},
+			{
+				role: 'assistant',
+				content: `当然可以，添加重置功能：
+
+\`\`\`tsx
+import { useState } from 'react';
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+
+  const reset = () => setCount(0);
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+      <button onClick={() => setCount(count - 1)}>Decrement</button>
+      <button onClick={reset}>Reset</button>
+    </div>
+  );
+}
+\`\`\`
+
+现在你可以点击 Reset 按钮将计数器重置为 0。`
+			}
+		],
+		success: Math.random() > 0.1,
+		totalTokens: 1000 + Math.floor(Math.random() * 2000),
+		duration: 2000 + Math.floor(Math.random() * 5000),
+		timestamp: new Date(Date.now() - i * 3600000).toISOString(),
+	})),
+	userRanking: Array.from({ length: 5 }, (_, i) => ({
+		userId: `user-${i}`,
+		name: ['张三', '李四', '王五', '赵六', '钱七'][i],
+		email: `user${i}@example.com`,
+		sessionCount: 500 - i * 50,
+		totalTokens: 1000000 - i * 100000,
+	})),
+	languageUsage: [
+		{ language: 'TypeScript', count: 450 },
+		{ language: 'Python', count: 320 },
+		{ language: 'Rust', count: 180 },
+		{ language: 'Go', count: 120 },
+		{ language: 'JavaScript', count: 90 },
+	]
+};
+
+const heatmapData = Array.from({ length: 365 }, (_, i) => {
+	const date = new Date();
+	date.setDate(date.getDate() - (364 - i));
+	const base = Math.random() > 0.8 ? Math.floor(Math.random() * 20) : Math.floor(Math.random() * 5); 
+	return {
+		date: date.toISOString().split('T')[0],
+		count: base,
+	};
+});
+
+const adoptionData = {
+	totalGenerated: 15420,
+	totalAccepted: 12850,
+	acceptanceRate: 83.3,
+	byLanguage: [
+		{ language: 'TypeScript', rate: 92, total: 8500 },
+		{ language: 'Java', rate: 78, total: 4200 },
+		{ language: 'CSS', rate: 65, total: 2720 },
+	],
+};
+
+const recentAdoptedCode = [
+	{
+		id: '1',
+		language: 'TypeScript',
+		snippet: 'const { data } = await api.get("/users");',
+		time: '2分钟前',
+		user: '张三',
+		model: 'GLM-4.7',
+		before: `import { useEffect, useState } from 'react';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export default function UsersList() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/users');
+        const result = await response.json();
+        setUsers(result.data || []);
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <ul>
+      {users.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}`,
+		after: `import { useQuery } from '@tanstack/react-query';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export default function UsersList() {
+  const { data: users, isLoading, error } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const response = await api.get<User[]>('/users');
+      return response.data;
+    },
+  });
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error loading users</div>;
+
+  return (
+    <ul>
+      {users?.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}`,
+	},
+	{
+		id: '2',
+		language: 'Python',
+		snippet: 'df = pd.read_csv("data.csv")',
+		time: '5分钟前',
+		user: '李四',
+		model: 'GLM-4.7',
+		before: `import csv
+from typing import List, Dict
+
+def read_csv_file(filepath: str) -> List[Dict]:
+    result = []
+    with open(filepath, 'r', encoding='utf-8') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            result.append(dict(row))
+    return result
+
+def process_data(data: List[Dict]) -> Dict:
+    total = len(data)
+    ages = [int(row.get('age', 0)) for row in data if row.get('age')]
+    avg_age = sum(ages) / len(ages) if ages else 0
+    return {
+        'total_records': total,
+        'average_age': round(avg_age, 2),
+        'valid_ages': len(ages)
+    }
+
+if __name__ == '__main__':
+    data = read_csv_file('data.csv')
+    stats = process_data(data)
+    print(stats)`,
+		after: `import pandas as pd
+
+def process_data(filepath: str) -> dict:
+    df = pd.read_csv(filepath)
+    
+    stats = {
+        'total_records': len(df),
+        'average_age': df['age'].mean().round(2),
+        'valid_ages': df['age'].notna().sum(),
+        'age_distribution': df['age'].describe().to_dict()
+    }
+    
+    return stats
+
+if __name__ == '__main__':
+    stats = process_data('data.csv')
+    print(stats)`,
+	},
+	{
+		id: '3',
+		language: 'Go',
+		snippet: 'func main() { fmt.Println("Hello") }',
+		time: '12分钟前',
+		user: '王五',
+		model: 'deepseek-coder',
+		before: `package main
+
+import (
+    "fmt"
+    "net/http"
+    "encoding/json"
+)
+
+type User struct {
+    ID    int    \`json:"id"\`
+    Name  string \`json:"name"\`
+    Email string \`json:"email"\`
+}
+
+func main() {
+    http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
+        users := []User{
+            {ID: 1, Name: "Alice", Email: "alice@example.com"},
+            {ID: 2, Name: "Bob", Email: "bob@example.com"},
+        }
+        
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(users)
+    })
+    
+    fmt.Println("Server starting on :8080")
+    http.ListenAndServe(":8080", nil)
+}`,
+		after: `package main
+
+import (
+    "github.com/gin-gonic/gin"
+)
+
+type User struct {
+    ID    int    \`json:"id"\`
+    Name  string \`json:"name"\`
+    Email string \`json:"email"\`
+}
+
+func main() {
+    r := gin.Default()
+    
+    r.GET("/users", func(c *gin.Context) {
+        users := []User{
+            {ID: 1, Name: "Alice", Email: "alice@example.com"},
+            {ID: 2, Name: "Bob", Email: "bob@example.com"},
+        }
+        c.JSON(200, users)
+    })
+    
+    r.Run(":8080")
+}`,
+	},
+];
 
 interface DashboardStats {
 	totalSessions: number;
@@ -54,10 +530,14 @@ interface DashboardStats {
 	dailySessions: { date: string; count: number }[];
 	recentSessions: {
 		id: string;
-		sessionId: string;
-		userPrompt: string;
-		success: boolean;
+		session_id: string;
+		userName: string;
 		model: string;
+		messages: {
+			role: 'user' | 'assistant';
+			content: string;
+		}[];
+		success: boolean;
 		totalTokens: number;
 		duration: number;
 		timestamp: string;
@@ -74,15 +554,65 @@ interface DashboardStats {
 
 const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
+function formatMessageContent(content: string): (string | JSX.Element)[] {
+	const parts = content.split(/```(\w+)?\n([\s\S]*?)```/g);
+	const result: (string | JSX.Element)[] = [];
+
+	for (let i = 0; i < parts.length; i++) {
+		if (i % 3 === 0 && parts[i]) {
+			const textParts = parts[i].split('\n\n');
+			textParts.forEach((text, textIdx) => {
+				if (text.trim()) {
+					result.push(
+						<p key={`text-${i}-${textIdx}`} className="mb-2">
+							{text.split('\n').map((line, lineIdx) => (
+								<Fragment key={lineIdx}>
+									{lineIdx > 0 && <br />}
+									{line}
+								</Fragment>
+							))}
+						</p>
+					);
+				}
+			});
+		} else if (i % 3 === 2) {
+			const code = parts[i];
+			const lang = parts[i - 1] || 'plaintext';
+			result.push(
+				<div key={`code-${i}`} className="relative group my-2">
+					<div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+						<CopyOutlined className="text-gray-400 hover:text-gray-600 cursor-pointer" />
+					</div>
+					<SyntaxHighlighter
+						language={lang}
+						style={vscDarkPlus}
+						customStyle={{
+							borderRadius: '0.5rem',
+							fontSize: '0.875rem',
+							lineHeight: '1.625',
+							margin: 0,
+						}}
+						wrapLongLines={true}
+					>
+						{code}
+					</SyntaxHighlighter>
+				</div>
+			);
+		}
+	}
+
+	return result;
+}
+
 const modelColors: Record<
 	string,
 	'primary' | 'secondary' | 'success' | 'warning' | 'danger'
 > = {
-	'claude-3-opus': 'primary',
+	'MiniMax M2': 'primary',
 	'claude-3-sonnet': 'secondary',
 	'claude-3-haiku': 'success',
 	'gpt-4': 'warning',
-	'gpt-4o': 'danger',
+	'GLM-4.7': 'danger',
 };
 
 const languageColors: Record<string, string> = {
@@ -108,24 +638,21 @@ const languageColors: Record<string, string> = {
 	Markdown: '#083FA1',
 };
 
-const defaultLanguageColors = [
-	'#6366F1',
-	'#EC4899',
-	'#14B8A6',
-	'#F59E0B',
-	'#EF4444',
-	'#8B5CF6',
-	'#10B981',
-	'#F97316',
-	'#06B6D4',
-	'#84CC16',
+// 统一的蓝色系渐变色板（从深到浅，数据大的用深色）
+const blueGradientColors = [
+	'#2563EB', // blue-600
+	'#3B82F6', // blue-500
+	'#60A5FA', // blue-400
+	'#93C5FD', // blue-300
+	'#BFDBFE', // blue-200
+	'#DBEAFE', // blue-100
+	'#EFF6FF', // blue-50
+	'#F8FAFC', // slate-50
 ];
 
 function getLanguageColor(language: string, index: number): string {
-	return (
-		languageColors[language] ||
-		defaultLanguageColors[index % defaultLanguageColors.length]
-	);
+	// 使用统一的蓝色渐变
+	return blueGradientColors[index % blueGradientColors.length];
 }
 
 function getModelColor(model: string) {
@@ -145,89 +672,29 @@ function formatTimeAgo(timestamp: string) {
 	const hours = Math.floor(diff / 3600000);
 
 	if (minutes < 1) return '刚刚';
-	if (minutes < 60) return `${minutes} 分钟前`;
-	if (hours < 24) return `${hours} 小时前`;
+	if (minutes < 60) return `${minutes}分钟前`;
+	if (hours < 24) return `${hours}小时前`;
 	return time.toLocaleDateString('zh-CN');
 }
 
-const createSmoothPath = (points: { x: number; y: number }[]) => {
-	if (points.length < 2) return '';
-
-	let d = `M ${points[0].x} ${points[0].y}`;
-
-	for (let i = 0; i < points.length - 1; i++) {
-		const p0 = points[i];
-		const p1 = points[i + 1];
-		const midX = (p0.x + p1.x) / 2;
-		d += ` C ${midX} ${p0.y}, ${midX} ${p1.y}, ${p1.x} ${p1.y}`;
-	}
-
-	return d;
-};
-
-// 骨架屏组件
+// Simplified Skeleton
 const DashboardSkeleton = () => (
 	<div className="space-y-6 animate-pulse">
-		{/* Header Skeleton */}
-		<div className="flex justify-between items-end mb-8">
-			<div className="space-y-2">
-				<Skeleton className="rounded-lg w-48 h-8" />
-				<Skeleton className="rounded-lg w-64 h-4" />
-			</div>
+		<div className="flex justify-between items-center mb-6">
+			<Skeleton className="rounded-lg w-32 h-8" />
 			<div className="flex gap-2">
-				<Skeleton className="rounded-lg w-32 h-10" />
-				<Skeleton className="rounded-lg w-10 h-10" />
+				<Skeleton className="rounded-lg w-32 h-9" />
+				<Skeleton className="rounded-lg w-9 h-9" />
 			</div>
 		</div>
-
-		{/* Stats Grid Skeleton */}
-		<Row gutter={[24, 24]}>
+		<Row gutter={[16, 16]}>
 			{[1, 2, 3, 4].map((i) => (
 				<Col xs={24} sm={12} xl={6} key={i}>
-					<Card className="h-32 rounded-2xl">
-						<CardBody className="flex flex-row items-center gap-4 p-6">
-							<Skeleton className="rounded-xl w-14 h-14" />
-							<div className="flex-1 space-y-2">
-								<Skeleton className="rounded-lg w-20 h-4" />
-								<Skeleton className="rounded-lg w-24 h-8" />
-							</div>
-						</CardBody>
-					</Card>
+					<Skeleton className="rounded-2xl h-24 w-full" />
 				</Col>
 			))}
 		</Row>
-
-		{/* Charts Skeleton */}
-		<Row gutter={[24, 24]}>
-			<Col xs={24} lg={16}>
-				<Card className="h-[400px] rounded-2xl">
-					<CardHeader className="px-6 pt-6">
-						<Skeleton className="rounded-lg w-32 h-6" />
-					</CardHeader>
-					<CardBody>
-						<Skeleton className="rounded-lg w-full h-full" />
-					</CardBody>
-				</Card>
-			</Col>
-			<Col xs={24} lg={8}>
-				<Card className="h-[400px] rounded-2xl">
-					<CardHeader className="px-6 pt-6">
-						<Skeleton className="rounded-lg w-32 h-6" />
-					</CardHeader>
-					<CardBody className="space-y-4">
-						{[1, 2, 3, 4, 5].map((i) => (
-							<div key={i} className="space-y-2">
-								<div className="flex justify-between">
-									<Skeleton className="rounded w-16 h-4" />
-									<Skeleton className="rounded w-10 h-4" />
-								</div>
-								<Skeleton className="rounded-full w-full h-2" />
-							</div>
-						))}
-					</CardBody>
-				</Card>
-			</Col>
-		</Row>
+		<div className="h-96 bg-gray-100 rounded-2xl" />
 	</div>
 );
 
@@ -236,85 +703,47 @@ export default function Dashboard() {
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [diffModalOpen, setDiffModalOpen] = useState(false);
+	const [selectedDiff, setSelectedDiff] = useState<typeof recentAdoptedCode[0] | null>(null);
+	const [chatModalOpen, setChatModalOpen] = useState(false);
+	const [selectedSession, setSelectedSession] = useState<typeof mockStats.recentSessions[0] | null>(null);
 
 	useEffect(() => {
-		api.get('/agent-sessions/stats')
-			.then((res) => setStats(res.data))
-			.catch((err) => setError(err.message))
-			.finally(() => setLoading(false));
+		// Use mock data instead of API call
+		setStats(mockStats);
+		setLoading(false);
 	}, []);
-
-	const getGreeting = () => {
-		const hour = new Date().getHours();
-		if (hour < 5) return '夜深了';
-		if (hour < 12) return '早安';
-		if (hour < 14) return '中午好';
-		if (hour < 18) return '下午好';
-		return '晚上好';
-	};
 
 	if (error) {
 		return (
-			<div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
-				<div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center">
-					<CloseCircleOutlined className="text-2xl text-red-500" />
-				</div>
-				<h3 className="text-lg font-semibold text-gray-800">加载失败</h3>
-				<p className="text-gray-500">{error}</p>
-				<Button
-					color="primary"
-					variant="flat"
-					onPress={() => window.location.reload()}
-					startContent={<ReloadOutlined />}
-				>
-					重试
-				</Button>
+			<div className="flex flex-col items-center justify-center h-[50vh] space-y-4 text-gray-500">
+				<CloseCircleOutlined className="text-2xl text-red-500" />
+				<p>{error}</p>
+				<Button size="sm" onPress={() => window.location.reload()}>重试</Button>
 			</div>
 		);
 	}
 
-	if (loading || !stats) {
-		return <DashboardSkeleton />;
-	}
+	if (loading || !stats) return <DashboardSkeleton />;
 
-	const todayChange =
-		stats.yesterdaySessions > 0
-			? ((stats.todaySessions - stats.yesterdaySessions) /
-					stats.yesterdaySessions) *
-			  100
-			: stats.todaySessions > 0
-			  ? 100
-			  : 0;
+	const todayChange = stats.yesterdaySessions > 0
+		? ((stats.todaySessions - stats.yesterdaySessions) / stats.yesterdaySessions) * 100
+		: stats.todaySessions > 0 ? 100 : 0;
 
-	const weekChange =
-		stats.lastWeekSessions > 0
-			? ((stats.thisWeekSessions - stats.lastWeekSessions) /
-					stats.lastWeekSessions) *
-			  100
-			: stats.thisWeekSessions > 0
-			  ? 100
-			  : 0;
+	const weekChange = stats.lastWeekSessions > 0
+		? ((stats.thisWeekSessions - stats.lastWeekSessions) / stats.lastWeekSessions) * 100
+		: stats.thisWeekSessions > 0 ? 100 : 0;
 
 	const dailyData = (() => {
-		const sessionMap = new Map(
-			stats.dailySessions.map((d) => [
-				new Date(d.date).toDateString(),
-				d.count,
-			]),
-		);
+		const sessionMap = new Map(stats.dailySessions.map((d) => [new Date(d.date).toDateString(), d.count]));
 		const result = [];
 		for (let i = 6; i >= 0; i--) {
 			const date = new Date();
 			date.setDate(date.getDate() - i);
-			result.push({
-				day: dayNames[date.getDay()],
-				count: sessionMap.get(date.toDateString()) || 0,
-			});
+			result.push({ day: dayNames[date.getDay()], count: sessionMap.get(date.toDateString()) || 0 });
 		}
 		return result;
 	})();
-
-	const maxCalls = Math.max(...dailyData.map((d) => d.count), 1);
 
 	const totalModelCalls = stats.modelUsage.reduce((sum, m) => sum + m.count, 0);
 	const modelUsageWithPercentage = stats.modelUsage.map((m) => ({
@@ -323,632 +752,517 @@ export default function Dashboard() {
 	}));
 
 	return (
-		<Fragment>
-			{/* Dashboard Header */}
-			<div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 fade-in">
-				<div>
-					<h1 className="text-2xl font-bold text-gray-800">
-						{getGreeting()}，{user?.name || '管理员'} <span className="text-2xl">👋</span>
-					</h1>
-					<p className="text-gray-500 mt-1 text-sm">
-						这是您今天的平台概览数据报告
-					</p>
-				</div>
-				<div className="flex items-center gap-3">
-					<RangePicker className="h-10 border-none bg-white rounded-xl shadow-sm hover:bg-gray-50" />
-					<Button
-						isIconOnly
-						className="bg-white shadow-sm text-gray-600 rounded-xl"
-						variant="flat"
-					>
-						<CloudDownloadOutlined className="text-lg" />
+		<div className="space-y-6 fade-in p-2 md:p-4">
+			{/* Top Bar */}
+			<div className="flex justify-between items-center">
+				<h1 className="text-2xl font-bold text-gray-800">仪表盘</h1>
+				<div className="flex items-center gap-2">
+					<RangePicker className="h-9 border-none bg-white rounded-lg shadow-sm hover:bg-gray-50 text-sm" />
+					<Button isIconOnly size="sm" className="bg-white text-gray-500 shadow-sm rounded-lg">
+						<CloudDownloadOutlined />
 					</Button>
-					<Button
-						color="primary"
-						className="shadow-md shadow-primary/20 rounded-xl font-medium"
-						startContent={<ReloadOutlined />}
-						onPress={() => window.location.reload()}
-					>
-						刷新数据
+					<Button isIconOnly size="sm" color="primary" className="shadow-sm rounded-lg" onPress={() => window.location.reload()}>
+						<ReloadOutlined />
 					</Button>
 				</div>
 			</div>
 
-			<div className="space-y-6">
-				{/* Stats Cards */}
-				<Row gutter={[24, 24]}>
-					<Col xs={24} sm={12} xl={6}>
-						<Card className="rounded-2xl border-none shadow-sm hover:shadow-lg transition-shadow duration-300">
-							<CardBody className="p-6">
-								<div className="flex items-start justify-between">
-									<div className="space-y-2">
-										<p className="text-sm font-medium text-gray-500">总会话数</p>
-										<p className="text-3xl font-bold text-gray-800 tracking-tight">
-											{stats.totalSessions.toLocaleString()}
-										</p>
+			{/* KPI Cards */}
+			<Row gutter={[16, 16]}>
+				{[
+					{ 
+						title: '总会话数', 
+						value: stats.totalSessions.toLocaleString(), 
+						icon: <ThunderboltOutlined />, 
+						change: weekChange, 
+						period: '较上周', 
+						color: 'blue' 
+					},
+					{ 
+						title: '今日会话', 
+						value: stats.todaySessions, 
+						icon: <ClockCircleOutlined />, 
+						change: todayChange, 
+						period: '较昨日', 
+						color: 'green' 
+					},
+					{ 
+						title: 'Token 消耗', 
+						value: `${(stats.totalTokens / 1000).toFixed(1)}k`, 
+						icon: <FireOutlined />, 
+						meta: `输入: ${(stats.promptTokens/1000).toFixed(1)}k / 输出: ${(stats.completionTokens/1000).toFixed(1)}k`, 
+						color: 'purple' 
+					},
+					{ 
+						title: '请求成功率', 
+						value: `${stats.successRate.toFixed(1)}%`, 
+						icon: <CheckCircleOutlined />, 
+						progress: stats.successRate, 
+						color: 'orange' 
+					},
+				].map((item, idx) => (
+					<Col xs={24} sm={12} xl={6} key={idx}>
+						<Card className="border-none shadow-sm hover:shadow-md transition-all duration-300 h-full rounded-2xl bg-white/80 backdrop-blur-sm">
+							<CardBody className="p-5 flex flex-col justify-between h-full gap-4">
+								<div className="flex justify-between items-start">
+									<div>
+										<p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{item.title}</p>
+										<p className="text-3xl font-bold text-gray-800 mt-1">{item.value}</p>
 									</div>
-									<div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shadow-sm">
-										<ThunderboltOutlined className="text-blue-500 text-xl" />
-									</div>
-								</div>
-								<div className="mt-4 flex items-center text-xs font-medium">
-									<div
-										className={`px-2 py-0.5 rounded-full flex items-center gap-1 ${
-											weekChange >= 0
-												? 'bg-green-50 text-green-600'
-												: 'bg-red-50 text-red-600'
-										}`}
-									>
-										{weekChange >= 0 ? (
-											<ArrowUpOutlined />
-										) : (
-											<ArrowDownOutlined />
-										)}
-										<span>{Math.abs(weekChange).toFixed(0)}%</span>
-									</div>
-									<span className="text-gray-400 ml-2">较上周</span>
-								</div>
-							</CardBody>
-						</Card>
-					</Col>
-					<Col xs={24} sm={12} xl={6}>
-						<Card className="rounded-2xl border-none shadow-sm hover:shadow-lg transition-shadow duration-300">
-							<CardBody className="p-6">
-								<div className="flex items-start justify-between">
-									<div className="space-y-2">
-										<p className="text-sm font-medium text-gray-500">今日会话</p>
-										<p className="text-3xl font-bold text-gray-800 tracking-tight">
-											{stats.todaySessions}
-										</p>
-									</div>
-									<div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center shadow-sm">
-										<ClockCircleOutlined className="text-green-500 text-xl" />
+									<div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-${item.color}-50 text-${item.color}-500`}>
+										{item.icon}
 									</div>
 								</div>
-								<div className="mt-4 flex items-center text-xs font-medium">
-									<div
-										className={`px-2 py-0.5 rounded-full flex items-center gap-1 ${
-											todayChange >= 0
-												? 'bg-green-50 text-green-600'
-												: 'bg-red-50 text-red-600'
-										}`}
-									>
-										{todayChange >= 0 ? (
-											<ArrowUpOutlined />
-										) : (
-											<ArrowDownOutlined />
-										)}
-										<span>{Math.abs(todayChange).toFixed(0)}%</span>
-									</div>
-									<span className="text-gray-400 ml-2">较昨日</span>
-								</div>
-							</CardBody>
-						</Card>
-					</Col>
-					<Col xs={24} sm={12} xl={6}>
-						<Card className="rounded-2xl border-none shadow-sm hover:shadow-lg transition-shadow duration-300">
-							<CardBody className="p-6">
-								<div className="flex items-start justify-between">
-									<div className="space-y-2">
-										<p className="text-sm font-medium text-gray-500">
-											Token 消耗
-										</p>
-										<p className="text-3xl font-bold text-gray-800 tracking-tight">
-											{(stats.totalTokens / 1000).toFixed(1)}k
-										</p>
-									</div>
-									<div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center shadow-sm">
-										<FireOutlined className="text-purple-500 text-xl" />
-									</div>
-								</div>
-								<div className="mt-4 flex items-center justify-between text-xs text-gray-400">
-									<div className="flex items-center gap-2">
-										<span className="w-2 h-2 rounded-full bg-purple-200" />
-										<span>输入: {(stats.promptTokens / 1000).toFixed(1)}k</span>
-									</div>
-									<div className="flex items-center gap-2">
-										<span className="w-2 h-2 rounded-full bg-purple-400" />
-										<span>
-											输出: {(stats.completionTokens / 1000).toFixed(1)}k
+								
+								{item.change !== undefined && (
+									<div className="flex items-center text-sm">
+										<span className={`flex items-center font-medium ${item.change >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+											{item.change >= 0 ? <ArrowUpOutlined className="mr-1" /> : <ArrowDownOutlined className="mr-1" />}
+											{Math.abs(item.change).toFixed(0)}%
 										</span>
+										<span className="text-gray-400 ml-1.5">{item.period}</span>
 									</div>
-								</div>
-							</CardBody>
-						</Card>
-					</Col>
-					<Col xs={24} sm={12} xl={6}>
-						<Card className="rounded-2xl border-none shadow-sm hover:shadow-lg transition-shadow duration-300">
-							<CardBody className="p-6">
-								<div className="flex items-start justify-between">
-									<div className="space-y-2">
-										<p className="text-sm font-medium text-gray-500">
-											请求成功率
-										</p>
-										<p className="text-3xl font-bold text-gray-800 tracking-tight">
-											{stats.successRate.toFixed(1)}%
-										</p>
+								)}
+
+								{item.meta && (
+									<div className="text-xs text-gray-400 font-mono bg-gray-50 px-2 py-1 rounded w-fit">
+										{item.meta}
 									</div>
-									<div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center shadow-sm">
-										<CheckCircleOutlined className="text-orange-500 text-xl" />
-									</div>
-								</div>
-								<div className="mt-4 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-									<div
-										className="bg-orange-400 h-1.5 rounded-full"
-										style={{ width: `${stats.successRate}%` }}
-									/>
-								</div>
-							</CardBody>
-						</Card>
-					</Col>
-				</Row>
+								)}
 
-				<Row gutter={[24, 24]}>
-					{/* Sessions Chart */}
-					<Col xs={24} lg={16}>
-						<Card className="border-none shadow-sm rounded-2xl h-full">
-							<CardHeader className="px-6 pt-6 flex justify-between items-center">
-								<div>
-									<h2 className="text-lg font-bold text-gray-800">趋势分析</h2>
-									<p className="text-xs text-gray-400">近 7 天会话活跃度</p>
-								</div>
-								<Button
-									size="sm"
-									variant="light"
-									color="primary"
-									endContent={<ArrowDownOutlined className="text-xs" />}
-								>
-									导出 CSV
-								</Button>
-							</CardHeader>
-							<CardBody className="overflow-hidden px-2 pb-2">
-								{dailyData.length > 0 ? (
-									<div className="h-80 w-full relative">
-										{(() => {
-											const height = 300; // Increased internal height for better amplitude
-											const width = 1200;
-											const padding = 20;
-											const contentWidth = width - padding * 2;
-											const contentHeight = height - padding * 2;
-
-											// Use a minimum maxCalls to prevent flat lines on low data
-											const adjustedMaxCalls = Math.max(maxCalls, 5);
-
-											const points = dailyData.map((d, i) => ({
-												x:
-													padding +
-													(i / (dailyData.length - 1)) * contentWidth,
-												y:
-													padding +
-													contentHeight -
-													(d.count / adjustedMaxCalls) * contentHeight,
-												value: d.count,
-												label: d.day,
-											}));
-
-											const pathD = createSmoothPath(points);
-											const areaD = `${pathD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
-
-											return (
-												<svg
-													viewBox={`0 0 ${width} ${height + 40}`}
-													className="w-full h-full overflow-visible"
-													preserveAspectRatio="none"
-												>
-													<defs>
-														<linearGradient
-															id="chartGradient"
-															x1="0"
-															y1="0"
-															x2="0"
-															y2="1"
-														>
-															<stop
-																offset="0%"
-																stopColor="#3B82F6"
-																stopOpacity="0.2"
-															/>
-															<stop
-																offset="100%"
-																stopColor="#3B82F6"
-																stopOpacity="0"
-															/>
-														</linearGradient>
-														<filter id="shadow" colorInterpolationFilters="sRGB">
-															<feDropShadow
-																dx="0"
-																dy="4"
-																stdDeviation="4"
-																floodColor="#3B82F6"
-																floodOpacity="0.3"
-															/>
-														</filter>
-													</defs>
-
-													{/* Grid lines */}
-													{[0, 0.25, 0.5, 0.75, 1].map((t) => (
-														<line
-															key={t}
-															x1={padding}
-															y1={padding + contentHeight * t}
-															x2={width - padding}
-															y2={padding + contentHeight * t}
-															stroke="#F3F4F6"
-															strokeDasharray="4 4"
-															strokeWidth="1"
-														/>
-													))}
-
-													{/* Area */}
-													<path d={areaD} fill="url(#chartGradient)" />
-
-													{/* Line */}
-													<path
-														d={pathD}
-														fill="none"
-														stroke="#3B82F6"
-														strokeWidth="4"
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														filter="url(#shadow)"
-													/>
-
-													{/* Points and Tooltips */}
-													{points.map((p, _i) => (
-														<g key={`${p.x}-${p.y}`} className="group">
-															<rect
-																x={p.x - 40}
-																y={0}
-																width={80}
-																height={height}
-																fill="transparent"
-																className="cursor-pointer"
-															/>
-															
-															{/* Vertical Guide Line on Hover */}
-															<line
-																x1={p.x}
-																y1={padding}
-																x2={p.x}
-																y2={height}
-																stroke="#3B82F6"
-																strokeWidth="1"
-																strokeDasharray="4 4"
-																className="opacity-0 group-hover:opacity-40 transition-opacity"
-															/>
-
-															<circle
-																cx={p.x}
-																cy={p.y}
-																r="5"
-																className="fill-white stroke-blue-500 stroke-[3px] transition-all duration-300 group-hover:r-7"
-															/>
-
-															{/* Fancy Tooltip */}
-															<foreignObject
-																x={p.x - 50}
-																y={p.y - 60}
-																width="100"
-																height="50"
-																className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-															>
-																<div className="flex flex-col items-center justify-center">
-																	<div className="bg-gray-900/90 backdrop-blur text-white text-xs px-3 py-1.5 rounded-lg shadow-xl transform translate-y-2 group-hover:translate-y-0 transition-transform">
-																		<span className="font-bold">{p.value}</span> 次会话
-																	</div>
-																	<div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-900/90"></div>
-																</div>
-															</foreignObject>
-
-															<text
-																x={p.x}
-																y={height + 30}
-																textAnchor="middle"
-																className="text-xs fill-gray-400 font-medium"
-															>
-																{p.label}
-															</text>
-														</g>
-													))}
-												</svg>
-											);
-										})()}
-									</div>
-								) : (
-									<div className="h-64 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl m-4 border border-dashed border-gray-200">
-										<FieldTimeOutlined className="text-3xl mb-2 text-gray-300" />
-										<span>暂无活动数据</span>
+								{item.progress !== undefined && (
+									<div className="w-full bg-gray-100 rounded-full h-1 mt-1">
+										<div className="bg-orange-400 h-1 rounded-full" style={{ width: `${item.progress}%` }} />
 									</div>
 								)}
 							</CardBody>
 						</Card>
 					</Col>
+				))}
+			</Row>
 
-					{/* Model Usage */}
-					<Col xs={24} lg={8}>
-						<Card className="h-full border-none shadow-sm rounded-2xl">
-							<CardHeader className="px-6 pt-6 pb-0">
-								<h2 className="text-lg font-bold text-gray-800">模型分布</h2>
-							</CardHeader>
-							<CardBody className="p-6">
-								{modelUsageWithPercentage.length > 0 ? (
-									<div className="space-y-5">
-										{modelUsageWithPercentage.map((model) => (
-											<div key={model.model} className="group">
-												<div className="flex justify-between text-sm mb-2">
-													<span className="font-medium text-gray-700 group-hover:text-primary transition-colors">
-														{model.model}
+			{/* Row 2: Trend & Code Adoption */}
+			<Row gutter={[16, 16]}>
+				<Col xs={24} lg={16}>
+					<Card className="border-none shadow-sm rounded-2xl h-full">
+						<CardHeader className="px-6 pt-5 pb-0 flex justify-between">
+							<div>
+								<h2 className="text-base font-bold text-gray-800">趋势分析</h2>
+								<p className="text-xs text-gray-400">近 7 天会话活跃度</p>
+							</div>
+						</CardHeader>
+						<CardBody className="overflow-hidden px-4 pb-4 pt-2 flex flex-col">
+							{dailyData.length > 0 ? (
+								<div className="w-full flex-1 min-h-[140px]">
+									<ResponsiveContainer width="100%" height="100%">
+										<AreaChart data={dailyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+											<defs>
+												<linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+													<stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
+													<stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+												</linearGradient>
+											</defs>
+											<CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+											<XAxis
+												dataKey="day"
+												axisLine={false}
+												tickLine={false}
+												tick={{ fontSize: 12, fill: '#9CA3AF' }}
+												dy={10}
+											/>
+											<YAxis hide={true} />
+											<RechartsTooltip
+												contentStyle={{
+													backgroundColor: 'rgba(31, 41, 55, 0.9)',
+													border: 'none',
+													borderRadius: '6px',
+													padding: '4px 8px',
+													color: '#fff',
+													fontSize: '12px',
+												}}
+												itemStyle={{ color: '#fff' }}
+												cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '4 4' }}
+												formatter={(value: number) => [`${value} 次`, '']}
+												labelStyle={{ display: 'none' }}
+											/>
+											<Area
+												type="monotone"
+												dataKey="count"
+												stroke="#3B82F6"
+												strokeWidth={2}
+												fillOpacity={1}
+												fill="url(#colorCount)"
+												activeDot={{ r: 4, strokeWidth: 0, fill: '#3B82F6' }}
+											/>
+										</AreaChart>
+									</ResponsiveContainer>
+								</div>
+							) : (
+								<div className="flex items-center justify-center h-full text-gray-300 text-sm">暂无数据</div>
+							)}
+						</CardBody>
+					</Card>
+				</Col>
+				<Col xs={24} lg={8}>
+					<Card className="h-full border-none shadow-sm rounded-2xl overflow-hidden">
+						<CardHeader className="px-5 pt-5 pb-0 flex justify-between items-center">
+							<h2 className="text-base font-bold text-gray-800">代码采纳情况</h2>
+							<Chip size="sm" variant="flat" color="primary" className="h-6 text-xs font-bold shadow-sm">
+								{adoptionData.acceptanceRate}%
+							</Chip>
+						</CardHeader>
+						<CardBody className="p-5">
+							<div className="space-y-3 mb-5">
+								{adoptionData.byLanguage.map((item, idx) => (
+									<div key={item.language} className="flex items-center gap-3 group">
+										<span className="text-xs font-mono text-gray-600 w-20 font-medium">{item.language}</span>
+										<div className="flex-1 bg-white/70 rounded-full h-2 overflow-hidden shadow-inner">
+											<div
+												className="h-full rounded-full transition-all duration-700 group-hover:brightness-110"
+												style={{
+													width: `${item.rate}%`,
+													background: `linear-gradient(to right, ${blueGradientColors[idx + 3]}, ${blueGradientColors[idx + 4]})`
+												}}
+											/>
+										</div>
+										<span className="text-xs font-bold text-gray-700 w-9 text-right tabular-nums">{item.rate}%</span>
+									</div>
+								))}
+							</div>
+							<div className="pt-4 border-t border-blue-100">
+<p className="text-xs text-gray-500 uppercase mb-3 font-semibold tracking-wide flex items-center gap-1.5">
+								<CheckCircleOutlined className="text-blue-500" />
+								最近采纳
+							</p>
+							<div className="space-y-2">
+								{recentAdoptedCode.map((c) => (
+									<div key={c.id} onClick={() => { setSelectedDiff(c); setDiffModalOpen(true); }} className="flex justify-between items-center text-xs bg-white/80 p-2.5 rounded-lg border border-blue-100/50 hover:border-blue-200 cursor-pointer transition-colors group">
+										<code className="text-gray-700 truncate max-w-[150px] font-medium group-hover:text-blue-700 transition-colors">{c.snippet}</code>
+										<span className="text-gray-400 whitespace-nowrap ml-2 text-[10px]">{c.time}</span>
+									</div>
+								))}
+							</div>
+							</div>
+						</CardBody>
+					</Card>
+				</Col>
+			</Row>
+
+			{/* Row 3: Heatmap & Model Distribution */}
+			<Row gutter={[16, 16]}>
+				<Col xs={24} lg={15}>
+					<Card className="border-none shadow-sm rounded-2xl h-full">
+						<CardHeader className="px-6 pt-4 pb-1 flex justify-between items-center">
+							<h2 className="text-base font-bold text-gray-800">年度活跃热力图</h2>
+							<div className="flex items-center gap-1.5 text-xs text-gray-400">
+								<span>少</span>
+								<div className="flex gap-[2px]">
+									<div className="w-4 h-4 rounded-sm bg-gray-100" />
+									<div className="w-4 h-4 rounded-sm bg-green-200" />
+									<div className="w-4 h-4 rounded-sm bg-green-400" />
+									<div className="w-4 h-4 rounded-sm bg-green-600" />
+								</div>
+								<span>多</span>
+							</div>
+						</CardHeader>
+						<CardBody className="px-6 py-3 flex flex-col justify-center flex-1">
+							<div className="flex gap-2 w-full overflow-x-auto custom-scrollbar">
+								<div className="flex flex-col justify-around text-[10px] text-gray-400 w-4 flex-shrink-0">
+									<span>一</span>
+									<span>三</span>
+									<span>五</span>
+									<span>日</span>
+								</div>
+								<div className="flex-1 grid grid-rows-7 grid-flow-col gap-[3px] min-w-fit">
+									{heatmapData.map((d, i) => (
+										<Tooltip key={i} title={`${d.date}: ${d.count} 次`} mouseEnterDelay={0} mouseLeaveDelay={0}>
+											<div className={`w-4 h-4 rounded-sm transition-all hover:scale-110 hover:z-10 cursor-pointer ${
+												d.count === 0 ? 'bg-gray-100' :
+												d.count < 3 ? 'bg-green-200' :
+												d.count < 6 ? 'bg-green-300' :
+												d.count < 10 ? 'bg-green-400' :
+												'bg-green-600'
+											}`} />
+										</Tooltip>
+									))}
+								</div>
+							</div>
+						</CardBody>
+					</Card>
+				</Col>
+				<Col xs={24} lg={9}>
+					<Card className="h-full border-none shadow-sm rounded-2xl overflow-hidden">
+						<CardHeader className="px-5 pt-4 pb-2">
+							<div>
+								<h2 className="text-base font-bold text-gray-800">模型分布</h2>
+								<p className="text-xs text-gray-400 mt-0.5">调用次数统计</p>
+							</div>
+						</CardHeader>
+						<CardBody className="px-5 pb-4 pt-0">
+							{/* Model Stats */}
+							<div className="space-y-2.5">
+								{modelUsageWithPercentage.map((m, i) => {
+									const color = blueGradientColors[i % blueGradientColors.length];
+									return (
+										<div key={m.model} className="group">
+											<div className="flex items-center justify-between mb-1.5">
+												<div className="flex items-center gap-2">
+													<div
+														className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm group-hover:scale-110 transition-transform"
+														style={{ backgroundColor: color }}
+													/>
+													<span className="text-sm font-medium text-gray-700 truncate" title={m.model}>
+														{m.model}
 													</span>
-													<div className="flex items-center gap-2">
-														<span className="text-gray-500 text-xs">
-															{(model.tokens / 1000).toFixed(0)}k tkns
-														</span>
-														<span className="font-bold text-gray-800">
-															{model.percentage.toFixed(0)}%
-														</span>
-													</div>
 												</div>
-												<Progress
-													value={model.percentage}
-													color={getModelColor(model.model)}
-													size="sm"
-													className="h-2.5"
-													classNames={{
-														track: 'bg-gray-100',
-														indicator: 'transition-all duration-500 ease-out',
+												<div className="flex items-center gap-2 ml-2">
+													<span className="text-xs text-gray-400 font-mono">{m.count}次</span>
+													<span className="text-xs font-bold text-gray-800 w-10 text-right tabular-nums">{m.percentage.toFixed(1)}%</span>
+												</div>
+											</div>
+											<div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+												<div
+													className="h-full rounded-full transition-all duration-700 group-hover:brightness-110"
+													style={{
+														width: `${m.percentage}%`,
+														backgroundColor: color
 													}}
 												/>
 											</div>
-										))}
-									</div>
-								) : (
-									<div className="h-32 flex items-center justify-center text-gray-400">
-										暂无数据
-									</div>
-								)}
-							</CardBody>
-						</Card>
-					</Col>
-				</Row>
-
-				{/* Bottom Row */}
-				<Row gutter={[24, 24]}>
-					{/* Language Stats */}
-					<Col xs={24} lg={8}>
-						<Card className="h-full border-none shadow-sm rounded-2xl">
-							<CardHeader className="px-6 pt-6 flex justify-between items-center">
-								<h2 className="text-lg font-bold text-gray-800">热门语言</h2>
-								<Button size="sm" isIconOnly variant="light" className="text-gray-400">
-									<MoreOutlined />
-								</Button>
-							</CardHeader>
-							<CardBody className="p-6">
-								{stats.languageUsage.length > 0 ? (
-									<div className="flex flex-col h-full gap-6">
-										<div className="relative w-48 h-48 mx-auto flex-shrink-0 group">
-											<div className="absolute inset-0 rounded-full border-8 border-gray-50"></div>
-											<svg
-												viewBox="0 0 100 100"
-												className="w-full h-full transform -rotate-90 drop-shadow-lg"
-											>
-												{(() => {
-													const total = stats.languageUsage.reduce(
-														(sum, l) => sum + l.count,
-														0,
-													);
-													let currentOffset = 0;
-													const radius = 40;
-													const circumference = 2 * Math.PI * radius;
-
-													return stats.languageUsage.map((lang, index) => {
-														const percentage = (lang.count / total) * 100;
-														const dashArray = `${(percentage / 100) * circumference} ${circumference}`;
-														const dashOffset = -(
-															(currentOffset / 100) *
-															circumference
-														);
-														currentOffset += percentage;
-
-														return (
-															<circle
-																key={lang.language}
-																cx="50"
-																cy="50"
-																r={radius}
-																fill="transparent"
-																stroke={getLanguageColor(lang.language, index)}
-																strokeWidth="12"
-																strokeDasharray={dashArray}
-																strokeDashoffset={dashOffset}
-																className="transition-all duration-300 hover:stroke-width-14 cursor-pointer hover:opacity-90"
-															/>
-														);
-													});
-												})()}
-											</svg>
-											<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-												<span className="text-3xl font-black text-gray-800">
-													{stats.languageUsage.length}
-												</span>
-												<span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
-													LANGS
-												</span>
-											</div>
 										</div>
+									);
+								})}
+							</div>
+						</CardBody>
+					</Card>
+				</Col>
+			</Row>
 
-										<div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 max-h-60 pr-2">
-											{stats.languageUsage.slice(0, 6).map((lang, index) => {
-												const total = stats.languageUsage.reduce(
-													(sum, l) => sum + l.count,
-													0,
-												);
-												const percentage = (lang.count / total) * 100;
-												return (
-													<div
-														key={lang.language}
-														className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
-													>
-														<div className="flex items-center gap-3">
-															<div
-																className="w-3 h-3 rounded-full ring-2 ring-white shadow-sm"
-																style={{
-																	backgroundColor: getLanguageColor(
-																		lang.language,
-																		index,
-																	),
-																}}
-															/>
-															<span className="text-sm font-medium text-gray-700">
-																{lang.language}
-															</span>
-														</div>
-														<span className="text-sm text-gray-500 font-mono">
-															{percentage.toFixed(1)}%
-														</span>
+			{/* Row 4: Hot Languages & Recent Activity & Active Users */}
+			<Row gutter={[16, 16]}>
+				<Col xs={24} lg={8}>
+					<Card className="border-none shadow-sm rounded-2xl h-full">
+						<CardHeader className="px-5 pt-5 pb-0 flex justify-between">
+							<h2 className="text-base font-bold text-gray-800">热门语言</h2>
+							<MoreOutlined className="text-gray-400 rotate-90" />
+						</CardHeader>
+						<CardBody className="p-5">
+							<div className="space-y-4">
+								{stats.languageUsage.slice(0, 5).map((lang, idx) => {
+									const total = stats.languageUsage.reduce((acc, curr) => acc + curr.count, 0);
+									const percent = ((lang.count / total) * 100).toFixed(1);
+									return (
+										<div key={lang.language} className="group">
+											<div className="flex justify-between items-center mb-1">
+												<div className="flex items-center gap-2">
+													<div className={`
+														w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold
+														${idx === 0 ? 'bg-blue-600 text-white' :
+														  idx === 1 ? 'bg-blue-400 text-white' :
+														  idx === 2 ? 'bg-blue-300 text-blue-800' :
+														  'bg-blue-100 text-blue-600'}
+													`}>
+														{idx + 1}
 													</div>
-												);
-											})}
-										</div>
-									</div>
-								) : (
-									<div className="h-40 flex items-center justify-center text-gray-400">
-										暂无数据
-									</div>
-								)}
-							</CardBody>
-						</Card>
-					</Col>
-
-					{/* User Ranking */}
-					<Col xs={24} lg={8}>
-						<Card className="h-full border-none shadow-sm rounded-2xl">
-							<CardHeader className="px-6 pt-6 flex justify-between items-center pb-2">
-								<h2 className="text-lg font-bold text-gray-800">活跃用户</h2>
-								<Chip
-									size="sm"
-									variant="flat"
-									color="warning"
-									startContent={<TrophyOutlined />}
-									className="px-2"
-								>
-									Top 10
-								</Chip>
-							</CardHeader>
-							<CardBody className="overflow-y-auto max-h-[500px] custom-scrollbar p-0">
-								{stats.userRanking.length > 0 ? (
-									<div className="divide-y divide-gray-100">
-										{stats.userRanking.map((user, index) => (
-											<div
-												key={user.userId}
-												className="flex items-center justify-between p-4 hover:bg-amber-50/30 transition-colors"
-											>
-												<div className="flex items-center gap-3">
-													<div className="relative">
-														<Avatar
-															size="md"
-															name={user.name}
-															src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
-															className="ring-2 ring-white shadow-sm bg-gray-100"
-														/>
-														{index < 3 && (
-															<div
-																className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white text-[10px] shadow-sm ${
-																	index === 0
-																		? 'bg-yellow-400 text-white'
-																		: index === 1
-																		  ? 'bg-gray-400 text-white'
-																		  : 'bg-orange-400 text-white'
-																}`}
-															>
-																{index + 1}
-															</div>
-														)}
-													</div>
-													<div>
-														<p className="font-semibold text-gray-800 text-sm">
-															{user.name}
-														</p>
-														<p className="text-xs text-gray-400">
-															{user.email}
-														</p>
-													</div>
+													<span className="text-sm font-medium text-gray-700">{lang.language}</span>
 												</div>
 												<div className="text-right">
-													<p className="font-bold text-gray-800">
-														{user.sessionCount}
-													</p>
-													<p className="text-[10px] text-gray-400">会话</p>
+													<span className="text-xs font-bold text-gray-800">{percent}%</span>
 												</div>
 											</div>
-										))}
+											<div className="w-full bg-gray-50 rounded-full h-1.5 overflow-hidden">
+												<div
+													className="h-full rounded-full transition-all duration-500 group-hover:opacity-80"
+													style={{
+														width: `${percent}%`,
+														backgroundColor: getLanguageColor(lang.language, idx)
+													}}
+												/>
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						</CardBody>
+					</Card>
+				</Col>
+				<Col xs={24} lg={8}>
+					<Card className="border-none shadow-sm rounded-2xl h-full">
+						<CardHeader className="px-6 pt-5 pb-0 flex justify-between items-center">
+							<h2 className="text-base font-bold text-gray-800">最近活动</h2>
+							<Button size="sm" variant="light" isIconOnly><HistoryOutlined /></Button>
+						</CardHeader>
+						<CardBody className="p-6">
+<Timeline
+							pending={false}
+							className="mt-2"
+							items={stats.recentSessions.slice(0, 5).map((s) => ({
+								color: s.success ? 'green' : 'red',
+								children: (
+									<div className="group -mt-1 pb-4 cursor-pointer" onClick={() => { setSelectedSession(s); setChatModalOpen(true); }}>
+										<div className="flex justify-between text-xs text-gray-400 mb-1">
+											<span>{formatTimeAgo(s.timestamp)}</span>
+											<span className="font-mono">#{s.session_id.slice(-4)}</span>
+										</div>
+										<div className="text-sm text-gray-700 font-medium line-clamp-2 bg-gray-50 p-2.5 rounded border border-transparent group-hover:border-blue-300 group-hover:bg-blue-50 transition-colors">
+											{s.messages[0]?.content}
+										</div>
 									</div>
-								) : (
-									<div className="h-32 flex items-center justify-center text-gray-400">
-										暂无数据
+								)
+							}))}
+						/>
+						</CardBody>
+					</Card>
+				</Col>
+				<Col xs={24} lg={8}>
+					<Card className="border-none shadow-sm rounded-2xl h-full">
+						<CardHeader className="px-6 pt-5 pb-0 flex justify-between items-center">
+							<h2 className="text-base font-bold text-gray-800">活跃用户</h2>
+							<TrophyOutlined className="text-yellow-500" />
+						</CardHeader>
+						<CardBody className="p-0 overflow-hidden">
+							<div className="divide-y divide-gray-50">
+								{stats.userRanking.slice(0, 5).map((u, i) => (
+									<div key={u.userId} className="flex items-center justify-between px-6 py-3.5 hover:bg-gray-50/50 transition-colors">
+										<div className="flex items-center gap-3">
+											<div className="relative">
+												<Avatar src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`} size="sm" />
+												{i < 3 && <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border border-white ${i===0?'bg-yellow-400':i===1?'bg-gray-300':'bg-orange-400'}`} />}
+											</div>
+											<div className="flex flex-col">
+												<span className="text-sm font-bold text-gray-700">{u.name}</span>
+												<span className="text-xs text-gray-400">{u.email}</span>
+											</div>
+										</div>
+										<div className="text-right">
+											<span className="block text-base font-bold text-gray-800">{u.sessionCount}</span>
+											<span className="text-xs text-gray-400">会话</span>
+										</div>
 									</div>
-								)}
-							</CardBody>
-						</Card>
-					</Col>
+								))}
+							</div>
+						</CardBody>
+					</Card>
+				</Col>
+			</Row>
 
-					{/* Activity Log */}
-					<Col xs={24} lg={8}>
-						<Card className="h-full border-none shadow-sm rounded-2xl">
-							<CardHeader className="px-6 pt-6 flex justify-between items-center">
-								<h2 className="text-lg font-bold text-gray-800">最近活动</h2>
-								<Button size="sm" isIconOnly variant="light" className="text-gray-400">
-									<HistoryOutlined />
-								</Button>
-							</CardHeader>
-							<CardBody className="overflow-y-auto max-h-[500px] custom-scrollbar p-6">
-								{stats.recentSessions.length > 0 ? (
-									<Timeline
-										className="mt-2"
-										items={stats.recentSessions.map((session) => ({
-											color: session.success ? '#10B981' : '#EF4444',
-											dot: session.success ? (
-												<div className="w-3 h-3 bg-green-500 rounded-full ring-4 ring-green-100" />
-											) : (
-												<div className="w-3 h-3 bg-red-500 rounded-full ring-4 ring-red-100" />
-											),
-											children: (
-												<div className="pb-6 pl-2 group">
-													<div className="flex justify-between items-start mb-1">
-														<span className="text-[10px] text-gray-400 font-mono bg-gray-100 px-1.5 py-0.5 rounded">
-															{formatTimeAgo(session.timestamp)}
-														</span>
-														<span className="text-[10px] text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">
-															#{session.session_id.slice(-4)}
-														</span>
+<Modal isOpen={diffModalOpen} onClose={() => setDiffModalOpen(false)} size="5xl" scrollBehavior="inside">
+				<ModalContent>
+					<ModalHeader className="flex flex-col gap-1">
+						<span className="text-sm text-gray-500">代码差异对比</span>
+						<span className="text-lg font-bold">{selectedDiff?.language}</span>
+					</ModalHeader>
+					<ModalBody>
+						{selectedDiff && (
+							<>
+								<div className="flex items-center gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+									<div className="flex items-center gap-2">
+										<UserOutlined className="text-gray-400" />
+										<span className="text-sm font-medium text-gray-700">用户</span>
+										<span className="text-sm text-gray-900">{selectedDiff.user}</span>
+									</div>
+									<div className="w-px h-4 bg-gray-300" />
+									<div className="flex items-center gap-2">
+										<TrophyOutlined className="text-blue-400" />
+										<span className="text-sm font-medium text-gray-700">模型</span>
+										<span className="text-sm text-gray-900">{selectedDiff.model}</span>
+									</div>
+									<div className="ml-auto">
+										<span className="text-xs text-gray-400">{selectedDiff.time}</span>
+									</div>
+								</div>
+								<MultiFileDiff
+									oldFile={{
+										name: 'before',
+										contents: selectedDiff.before,
+										lang: selectedDiff.language.toLowerCase() as any
+									}}
+									newFile={{
+										name: 'after',
+										contents: selectedDiff.after,
+										lang: selectedDiff.language.toLowerCase() as any
+									}}
+								/>
+							</>
+						)}
+					</ModalBody>
+</ModalContent>
+			</Modal>
+
+			<Modal isOpen={chatModalOpen} onClose={() => setChatModalOpen(false)} size="4xl">
+				<ModalContent>
+					<ModalHeader className="flex flex-col gap-1 pb-4">
+						<span className="text-sm text-gray-500">会话详情</span>
+						<span className="text-lg font-bold">#{selectedSession?.session_id.slice(-6)}</span>
+					</ModalHeader>
+					<ModalBody className="max-h-[70vh] overflow-y-auto">
+						{selectedSession && (
+							<div className="space-y-4">
+								{selectedSession.messages.map((msg, idx) => (
+									msg.role === 'user' ? (
+										<div key={idx} className="flex justify-end">
+											<div className="flex items-end gap-3 max-w-[70%]">
+												<div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white px-4 py-3 rounded-2xl rounded-br-md shadow-lg shadow-blue-500/20">
+													<div className="flex items-center gap-2 mb-2">
+														<span className="text-xs font-medium text-blue-100">{selectedSession.userName}</span>
+														<span className="text-xs text-blue-200">·</span>
+														<span className="text-xs text-blue-200">{formatTimeAgo(selectedSession.timestamp)}</span>
 													</div>
-													<div className="bg-gray-50 rounded-xl p-3 border border-gray-100 group-hover:bg-white group-hover:shadow-sm transition-all">
-														<p className="text-gray-700 text-sm font-medium line-clamp-2 leading-relaxed mb-2">
-															{session.user_prompt}
-														</p>
-														<div className="flex items-center gap-2 mt-1">
-															<Chip size="sm" variant="flat" className="h-5 text-[10px] bg-white border border-gray-200">
-																{session.model}
-															</Chip>
-															<span className="text-[10px] text-gray-400 flex items-center gap-1">
-																<FieldTimeOutlined />
-																{formatDuration(session.duration)}
-															</span>
-														</div>
+													<p className="text-sm leading-relaxed break-words">{msg.content}</p>
+												</div>
+												<Avatar size="sm" className="bg-blue-100 text-blue-600 border-2 border-white shadow-sm">
+													<UserOutlined />
+												</Avatar>
+											</div>
+										</div>
+									) : (
+										<div key={idx} className="flex justify-start">
+											<div className="flex items-end gap-3 max-w-[80%]">
+												<Avatar size="sm" className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-2 border-white shadow-sm">
+													<TrophyOutlined />
+												</Avatar>
+												<div className="bg-white px-4 py-3 rounded-2xl rounded-bl-md shadow-lg border border-gray-100 min-w-0 flex-1">
+													<div className="flex items-center gap-2 mb-2 flex-wrap">
+														<span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full whitespace-nowrap">{selectedSession.model}</span>
+														<span className="text-xs text-gray-400 whitespace-nowrap">{formatTimeAgo(selectedSession.timestamp)}</span>
+													</div>
+													<div className="text-sm text-gray-800 leading-relaxed space-y-2 overflow-hidden">
+														{formatMessageContent(msg.content)}
 													</div>
 												</div>
-											),
-										}))}
-									/>
-								) : (
-									<div className="h-32 flex items-center justify-center text-gray-400">
-										暂无会话记录
+											</div>
+										</div>
+									)
+								))}
+
+								<div className="flex items-center justify-center gap-6 pt-4 border-t border-gray-100">
+									<div className="flex items-center gap-2 text-xs text-gray-500">
+										<FireOutlined className="text-orange-400" />
+										<span>{selectedSession.totalTokens.toLocaleString()} tokens</span>
 									</div>
-								)}
-							</CardBody>
-						</Card>
-					</Col>
-				</Row>
-			</div>
-		</Fragment>
+									<div className="flex items-center gap-2 text-xs text-gray-500">
+										<ClockCircleOutlined className="text-blue-400" />
+										<span>{formatDuration(selectedSession.duration)}</span>
+									</div>
+									<div className="flex items-center gap-2 text-xs text-gray-500">
+										{selectedSession.success ? (
+											<>
+												<CheckCircleOutlined className="text-green-400" />
+												<span className="text-green-600">成功</span>
+											</>
+										) : (
+											<>
+												<CloseCircleOutlined className="text-red-400" />
+												<span className="text-red-600">失败</span>
+											</>
+										)}
+									</div>
+								</div>
+							</div>
+						)}
+					</ModalBody>
+				</ModalContent>
+			</Modal>
+		</div>
 	);
 }

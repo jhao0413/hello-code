@@ -6,6 +6,12 @@ import {
 	SettingOutlined,
 	LogoutOutlined,
 	UserOutlined,
+	DesktopOutlined,
+	ProjectOutlined,
+	VideoCameraOutlined,
+	BookOutlined,
+	GitlabOutlined,
+	FileTextOutlined,
 } from '@ant-design/icons';
 import { Avatar, Tooltip } from '@heroui/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -17,7 +23,12 @@ interface SidebarProps {
 }
 
 const navItems = [
-	{ path: '/', label: '仪表板', icon: <HomeOutlined className="text-xl" /> },
+	{ path: '/', label: '仪表盘', icon: <HomeOutlined className="text-xl" /> },
+	{
+		path: '/workspace',
+		label: '我的工作台',
+		icon: <DesktopOutlined className="text-xl" />,
+	},
 	{
 		path: '/chat',
 		label: 'AI 对话',
@@ -27,6 +38,31 @@ const navItems = [
 		path: '/agents',
 		label: '智能体',
 		icon: <UserOutlined className="text-xl" />,
+	},
+	{
+		path: '/projects',
+		label: '项目管理',
+		icon: <ProjectOutlined className="text-xl" />,
+	},
+	{
+		path: '/meetings',
+		label: '会议管理',
+		icon: <VideoCameraOutlined className="text-xl" />,
+	},
+	{
+		path: '/knowledge',
+		label: '知识库',
+		icon: <BookOutlined className="text-xl" />,
+	},
+	{
+		path: '/versions',
+		label: '版本管理',
+		icon: <GitlabOutlined className="text-xl" />,
+	},
+	{
+		path: '/requirements',
+		label: '原始需求池',
+		icon: <FileTextOutlined className="text-xl" />,
 	},
 ];
 
