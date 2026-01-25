@@ -39,13 +39,13 @@ api.interceptors.response.use(
 				isRefreshing = true;
 
 				try {
-					const { access_token } = await authService.refresh();
-					authService.setAccessToken(access_token);
+					const { accessToken } = await authService.refresh();
+					authService.setAccessToken(accessToken);
 
-					failedRequestsQueue.forEach(({ resolve }) => resolve(access_token));
+					failedRequestsQueue.forEach(({ resolve }) => resolve(accessToken));
 					failedRequestsQueue = [];
 
-					originalRequest.headers.Authorization = `Bearer ${access_token}`;
+					originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 					return api(originalRequest);
 				} catch (refreshError) {
 					failedRequestsQueue.forEach(({ reject }) => reject(refreshError as Error));

@@ -2,15 +2,15 @@ import { Elysia, t } from 'elysia';
 import prisma from '../lib/prisma.js';
 
 type AgentSessionBody = {
-	session_id: string;
-	user_prompt: string;
-	prompt_tokens: number;
-	completion_tokens: number;
-	total_tokens: number;
+	sessionId: string;
+	userPrompt: string;
+	promptTokens: number;
+	completionTokens: number;
+	totalTokens: number;
 	success: boolean;
 	duration: number;
-	turns_count: number;
-	tool_calls_count: number;
+	turnsCount: number;
+	toolCallsCount: number;
 	model: string;
 	languages?: string[];
 	timestamp: string | number;
@@ -66,9 +66,9 @@ export const agentSessionRoutes = new Elysia({ prefix: '/api/agent-sessions' })
 		// Total tokens
 		const tokenStats = await prisma.agentSession.aggregate({
 			_sum: {
-				prompt_tokens: true,
-				completion_tokens: true,
-				total_tokens: true,
+				promptTokens: true,
+				completionTokens: true,
+				totalTokens: true,
 			},
 		});
 
@@ -81,7 +81,7 @@ export const agentSessionRoutes = new Elysia({ prefix: '/api/agent-sessions' })
 		const modelUsage = await prisma.agentSession.groupBy({
 			by: ['model'],
 			_count: { model: true },
-			_sum: { total_tokens: true },
+			_sum: { totalTokens: true },
 			orderBy: { _count: { model: 'desc' } },
 		});
 
@@ -90,7 +90,7 @@ export const agentSessionRoutes = new Elysia({ prefix: '/api/agent-sessions' })
 			{ date: Date; count: bigint }[]
 		>`
       SELECT DATE(timestamp) as date, COUNT(*) as count
-      FROM "agent_sessions"
+      FROM "agentSession"
       WHERE timestamp >= ${weekAgo}
       GROUP BY DATE(timestamp)
       ORDER BY date ASC
@@ -102,11 +102,11 @@ export const agentSessionRoutes = new Elysia({ prefix: '/api/agent-sessions' })
 			orderBy: { timestamp: 'desc' },
 			select: {
 				id: true,
-				session_id: true,
-				user_prompt: true,
+				sessionId: true,
+				userPrompt: true,
 				success: true,
 				model: true,
-				total_tokens: true,
+				totalTokens: true,
 				duration: true,
 				timestamp: true,
 			},
@@ -116,7 +116,7 @@ export const agentSessionRoutes = new Elysia({ prefix: '/api/agent-sessions' })
 		const userRanking = await prisma.agentSession.groupBy({
 			by: ['userId'],
 			_count: { id: true },
-			_sum: { total_tokens: true },
+			_sum: { totalTokens: true },
 			orderBy: { _count: { id: 'desc' } },
 			take: 10,
 		});
@@ -157,7 +157,7 @@ export const agentSessionRoutes = new Elysia({ prefix: '/api/agent-sessions' })
 			(u: {
 				userId: string;
 				_count: { id: number };
-				_sum: { total_tokens: number | null };
+				_sum: { totalTokens: number | null };
 			}) => {
 				const user = userMap.get(u.userId);
 				return {
@@ -165,7 +165,7 @@ export const agentSessionRoutes = new Elysia({ prefix: '/api/agent-sessions' })
 					name: user?.name || user?.email || 'Unknown',
 					email: user?.email || '',
 					sessionCount: u._count.id,
-					totalTokens: u._sum.total_tokens || 0,
+					totalTokens: u._sum.totalTokens || 0,
 				};
 			},
 		);
@@ -177,19 +177,19 @@ export const agentSessionRoutes = new Elysia({ prefix: '/api/agent-sessions' })
 			thisWeekSessions,
 			lastWeekSessions,
 			monthSessions,
-			totalTokens: tokenStats._sum.total_tokens || 0,
-			promptTokens: tokenStats._sum.prompt_tokens || 0,
-			completionTokens: tokenStats._sum.completion_tokens || 0,
+			totalTokens: tokenStats._sum.totalTokens || 0,
+			promptTokens: tokenStats._sum.promptTokens || 0,
+			completionTokens: tokenStats._sum.completionTokens || 0,
 			successRate: totalSessions > 0 ? (successCount / totalSessions) * 100 : 0,
 			modelUsage: modelUsage.map(
 				(m: {
 					model: string;
 					_count: { model: number };
-					_sum: { total_tokens: number | null };
+					_sum: { totalTokens: number | null };
 				}) => ({
 					model: m.model,
 					count: m._count.model,
-					tokens: m._sum.total_tokens || 0,
+					tokens: m._sum.totalTokens || 0,
 				}),
 			),
 			dailySessions: dailySessions.map((d) => ({
@@ -251,22 +251,22 @@ export const agentSessionRoutes = new Elysia({ prefix: '/api/agent-sessions' })
 		async ({ body }) => {
 			const typedBody = body as AgentSessionBody;
 			const data = {
-				user_prompt: typedBody.user_prompt,
-				prompt_tokens: typedBody.prompt_tokens,
-				completion_tokens: typedBody.completion_tokens,
-				total_tokens: typedBody.total_tokens,
+				userPrompt: typedBody.userPrompt,
+				promptTokens: typedBody.promptTokens,
+				completionTokens: typedBody.completionTokens,
+				totalTokens: typedBody.totalTokens,
 				success: typedBody.success,
 				duration: typedBody.duration,
-				turns_count: typedBody.turns_count,
-				tool_calls_count: typedBody.tool_calls_count,
+				turnsCount: typedBody.turnsCount,
+				toolCallsCount: typedBody.toolCallsCount,
 				model: typedBody.model,
 				languages: typedBody.languages ?? [],
 				timestamp: new Date(typedBody.timestamp),
 				userId: typedBody.userId,
 			};
 			const session = await prisma.agentSession.upsert({
-				where: { session_id: typedBody.session_id },
-				create: { session_id: typedBody.session_id, ...data },
+				where: { sessionId: typedBody.sessionId },
+				create: { sessionId: typedBody.sessionId, ...data },
 				update: data,
 			});
 			console.log(session);
@@ -275,15 +275,15 @@ export const agentSessionRoutes = new Elysia({ prefix: '/api/agent-sessions' })
 		},
 		{
 			body: t.Object({
-				session_id: t.String(),
-				user_prompt: t.String(),
-				prompt_tokens: t.Number(),
-				completion_tokens: t.Number(),
-				total_tokens: t.Number(),
+				sessionId: t.String(),
+				userPrompt: t.String(),
+				promptTokens: t.Number(),
+				completionTokens: t.Number(),
+				totalTokens: t.Number(),
 				success: t.Boolean(),
 				duration: t.Number(),
-				turns_count: t.Number(),
-				tool_calls_count: t.Number(),
+				turnsCount: t.Number(),
+				toolCallsCount: t.Number(),
 				model: t.String(),
 				languages: t.Optional(t.Array(t.String())),
 				timestamp: t.Union([t.String(), t.Number()]),
@@ -311,15 +311,15 @@ export const agentSessionRoutes = new Elysia({ prefix: '/api/agent-sessions' })
 				id: t.String(),
 			}),
 			body: t.Object({
-				session_id: t.Optional(t.String()),
-				user_prompt: t.Optional(t.String()),
-				prompt_tokens: t.Optional(t.Number()),
-				completion_tokens: t.Optional(t.Number()),
-				total_tokens: t.Optional(t.Number()),
+				sessionId: t.Optional(t.String()),
+				userPrompt: t.Optional(t.String()),
+				promptTokens: t.Optional(t.Number()),
+				completionTokens: t.Optional(t.Number()),
+				totalTokens: t.Optional(t.Number()),
 				success: t.Optional(t.Boolean()),
 				duration: t.Optional(t.Number()),
-				turns_count: t.Optional(t.Number()),
-				tool_calls_count: t.Optional(t.Number()),
+				turnsCount: t.Optional(t.Number()),
+				toolCallsCount: t.Optional(t.Number()),
 				model: t.Optional(t.String()),
 				languages: t.Optional(t.Array(t.String())),
 				timestamp: t.Optional(t.Union([t.String(), t.Number()])),

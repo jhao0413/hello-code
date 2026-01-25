@@ -11,11 +11,11 @@ model User {
   id            String   @id @default(cuid())
   email         String   @unique
   name          String?
-  password_hash String?  @map("password_hash")
-  email_verified Boolean @default(false) @map("email_verified")
+  passwordHash  String?
+  emailVerified Boolean  @default(false)
   image         String?
-  created_at    DateTime @default(now()) @map("created_at")
-  updated_at    DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   accounts      Account[]
   sessions      Session[]
@@ -23,37 +23,37 @@ model User {
   conversations Conversation[]
   agentSessions AgentSession[]
 
-  @@map("users")
+  @@map("user")
 }
 
 model Account {
   id                String  @id @default(cuid())
-  userId            String  @map("user_id")
+  userId            String
   type              String
   provider          String
-  providerAccountId String  @map("provider_account_id")
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
+  providerAccountId String
+  refreshToken      String? @db.Text
+  accessToken       String? @db.Text
+  expiresAt         Int?
+  tokenType         String?
   scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  idToken           String? @db.Text
+  sessionState      String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
-  @@map("accounts")
+  @@map("account")
 }
 
 model Session {
   id           String   @id @default(cuid())
-  sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id")
+  sessionToken String   @unique
+  userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("sessions")
+  @@map("session")
 }
 
 model VerificationToken {
@@ -62,53 +62,53 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
-  @@map("verification_tokens")
+  @@map("verificationToken")
 }
 
 model Agent {
-  id          String   @id @default(cuid()) /// Unique identifier for the agent
-  name        String /// Name of the agent
-  description String? /// Description of the agent's purpose
-  model       String   @default("claude-3-sonnet") /// AI model used by the agent
-  system_prompt String? /// System prompt that defines the agent's behavior
-  status      AgentStatus @default(IDLE) /// Current status of the agent
-  config      Json? /// Additional configuration for the agent
-  created_at   DateTime @default(now()) @map("created_at") /// Timestamp when the agent was created
-  updated_at   DateTime @updatedAt @map("updated_at") /// Timestamp when the agent was last updated
+  id            String      @id @default(cuid()) /// Unique identifier for the agent
+  name          String /// Name of the agent
+  description   String? /// Description of the agent's purpose
+  model         String      @default("claude-3-sonnet") /// AI model used by the agent
+  systemPrompt  String? /// System prompt that defines the agent's behavior
+  status        AgentStatus @default(IDLE) /// Current status of the agent
+  config        Json? /// Additional configuration for the agent
+  createdAt     DateTime    @default(now()) /// Timestamp when the agent was created
+  updatedAt     DateTime    @updatedAt /// Timestamp when the agent was last updated
 
-  userId        String @map("user_id")
+  userId        String
   user          User          @relation(fields: [userId], references: [id])
   conversations Conversation[]
 
-  @@map("agents")
+  @@map("agent")
 }
 
 model Conversation {
   id        String   @id @default(cuid()) /// Unique identifier for the conversation
   title     String? /// Title of the conversation
-  created_at DateTime @default(now()) @map("created_at") /// Timestamp when the conversation was created
-  updated_at DateTime @updatedAt @map("updated_at") /// Timestamp when the conversation was last updated
+  createdAt DateTime @default(now()) /// Timestamp when the conversation was created
+  updatedAt DateTime @updatedAt /// Timestamp when the conversation was last updated
 
-  userId   String @map("user_id")
+  userId   String
   user     User     @relation(fields: [userId], references: [id])
-  agentId  String? @map("agent_id")
+  agentId  String?
   agent    Agent?   @relation(fields: [agentId], references: [id])
   messages Message[]
 
-  @@map("conversations")
+  @@map("conversation")
 }
 
 model Message {
-  id        String   @id @default(cuid()) /// Unique identifier for the message
+  id        String      @id @default(cuid()) /// Unique identifier for the message
   role      MessageRole /// Role of the message sender (user, assistant, or system)
   content   String /// Content of the message
   metadata  Json? /// Additional metadata for the message
-  created_at DateTime @default(now()) @map("created_at") /// Timestamp when the message was created
+  createdAt DateTime    @default(now()) /// Timestamp when the message was created
 
-  conversationId String @map("conversation_id")
+  conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  @@map("messages")
+  @@map("message")
 }
 
 enum AgentStatus {
@@ -125,24 +125,24 @@ enum MessageRole {
 
 model AgentSession {
   id               String   @id @default(cuid()) /// Unique identifier for the agent session
-  session_id       String   @unique /// External session ID provided by the client
-  user_prompt      String /// User's question or prompt
-  prompt_tokens    Int /// Number of input tokens used
-  completion_tokens Int /// Number of output tokens generated
-  total_tokens     Int /// Total number of tokens used
+  sessionId        String   @unique /// External session ID provided by the client
+  userPrompt       String /// User's question or prompt
+  promptTokens     Int /// Number of input tokens used
+  completionTokens Int /// Number of output tokens generated
+  totalTokens      Int /// Total number of tokens used
   success          Boolean /// Whether the session completed successfully
   duration         Int /// Duration of the session in milliseconds
-  turns_count      Int /// Number of conversation turns
-  tool_calls_count Int /// Number of tool calls made during the session
+  turnsCount       Int /// Number of conversation turns
+  toolCallsCount   Int /// Number of tool calls made during the session
   model            String /// AI model used in the session
   languages        String[] /// Programming languages used in the session
   timestamp        DateTime /// Client-side timestamp
-  created_at       DateTime @default(now()) @map("created_at") /// Timestamp when the session was created
+  createdAt        DateTime @default(now()) /// Timestamp when the session was created
 
-  userId  String @map("user_id")
-  user    User   @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([timestamp])
-  @@map("agent_sessions")
+  @@map("agentSession")
 }

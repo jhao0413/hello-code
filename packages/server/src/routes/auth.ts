@@ -27,20 +27,20 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 				return { message: '邮箱已被注册' };
 			}
 
-			const password_hash = await hashPassword(password);
+			const passwordHash = await hashPassword(password);
 
 			const user = await prisma.user.create({
 				data: {
 					email,
 					name,
-					password_hash,
+					passwordHash,
 				},
 				select: {
 					id: true,
 					email: true,
 					name: true,
 					image: true,
-					created_at: true,
+					createdAt: true,
 				},
 			});
 
@@ -56,11 +56,11 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 				type: 'refresh',
 			};
 
-			const access_token = await createAccessToken(accessPayload);
-			const refresh_token = await createRefreshToken(refreshPayload);
+			const accessToken = await createAccessToken(accessPayload);
+			const refreshToken = await createRefreshToken(refreshPayload);
 
 			cookie.refresh_token.set({
-				value: refresh_token,
+				value: refreshToken,
 				httpOnly: true,
 				secure: process.env.NODE_ENV === 'production',
 				sameSite: 'lax',
@@ -70,7 +70,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 
 			return {
 				user,
-				access_token,
+				accessToken,
 			};
 		},
 		{
@@ -90,12 +90,12 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 				where: { email },
 			});
 
-			if (!user || !user.password_hash) {
+			if (!user || !user.passwordHash) {
 				set.status = 401;
 				return { message: '邮箱或密码错误' };
 			}
 
-			const isValid = await verifyPassword(password, user.password_hash);
+			const isValid = await verifyPassword(password, user.passwordHash);
 
 			if (!isValid) {
 				set.status = 401;
@@ -114,11 +114,11 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 				type: 'refresh',
 			};
 
-			const access_token = await createAccessToken(accessPayload);
-			const refresh_token = await createRefreshToken(refreshPayload);
+			const accessToken = await createAccessToken(accessPayload);
+			const refreshToken = await createRefreshToken(refreshPayload);
 
 			cookie.refresh_token.set({
-				value: refresh_token,
+				value: refreshToken,
 				httpOnly: true,
 				secure: process.env.NODE_ENV === 'production',
 				sameSite: 'lax',
@@ -132,9 +132,9 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 					email: user.email,
 					name: user.name,
 					image: user.image,
-					created_at: user.created_at,
+					createdAt: user.createdAt,
 				},
-				access_token,
+				accessToken,
 			};
 		},
 		{
@@ -147,14 +147,14 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 	.post(
 		'/refresh',
 		async ({ cookie, set }) => {
-			const refresh_token = cookie.refresh_token.value;
+			const refreshToken = cookie.refresh_token.value;
 
-			if (!refresh_token) {
+			if (!refreshToken) {
 				set.status = 401;
 				return createAuthError('请先登录');
 			}
 
-			const payload = await verifyRefreshToken(refresh_token);
+			const payload = await verifyRefreshToken(refreshToken);
 
 			if (!payload) {
 				set.status = 401;
@@ -168,9 +168,9 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 				type: 'access',
 			};
 
-			const new_access_token = await createAccessToken(accessPayload);
+			const newAccessToken = await createAccessToken(accessPayload);
 
-			return { access_token: new_access_token };
+			return { accessToken: newAccessToken };
 		},
 	)
 	.post(
@@ -191,8 +191,8 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 						email: true,
 						name: true,
 						image: true,
-						created_at: true,
-						email_verified: true,
+						createdAt: true,
+						emailVerified: true,
 					},
 				});
 

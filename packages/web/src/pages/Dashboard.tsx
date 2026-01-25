@@ -75,7 +75,7 @@ const mockStats: DashboardStats = {
 	})),
 	recentSessions: Array.from({ length: 10 }, (_, i) => ({
 		id: `session-${i}`,
-		session_id: `sess_${Math.random().toString(36).substr(2, 9)}`,
+		sessionId: `sess_${Math.random().toString(36).substr(2, 9)}`,
 		userName: ['张三', '李四', '王五', '赵六', '钱七'][i % 5],
 		model: ['GLM-4.7', 'MiniMax M2', 'deepseek-coder'][i % 3],
 		messages: i % 2 === 0 ? [
@@ -530,7 +530,7 @@ interface DashboardStats {
 	dailySessions: { date: string; count: number }[];
 	recentSessions: {
 		id: string;
-		session_id: string;
+		sessionId: string;
 		userName: string;
 		model: string;
 		messages: {
@@ -1102,7 +1102,7 @@ export default function Dashboard() {
 									<div className="group -mt-1 pb-4 cursor-pointer" onClick={() => { setSelectedSession(s); setChatModalOpen(true); }}>
 										<div className="flex justify-between text-xs text-gray-400 mb-1">
 											<span>{formatTimeAgo(s.timestamp)}</span>
-											<span className="font-mono">#{s.session_id.slice(-4)}</span>
+											<span className="font-mono">#{s.sessionId.slice(-4)}</span>
 										</div>
 										<div className="text-sm text-gray-700 font-medium line-clamp-2 bg-gray-50 p-2.5 rounded border border-transparent group-hover:border-blue-300 group-hover:bg-blue-50 transition-colors">
 											{s.messages[0]?.content}
@@ -1193,7 +1193,7 @@ export default function Dashboard() {
 				<ModalContent>
 					<ModalHeader className="flex flex-col gap-1 pb-4">
 						<span className="text-sm text-gray-500">会话详情</span>
-						<span className="text-lg font-bold">#{selectedSession?.session_id.slice(-6)}</span>
+						<span className="text-lg font-bold">#{selectedSession?.sessionId.slice(-6)}</span>
 					</ModalHeader>
 					<ModalBody className="max-h-[70vh] overflow-y-auto">
 						{selectedSession && (

@@ -9,7 +9,7 @@ export const agentRoutes = new Elysia({ prefix: '/api/agents' })
 			const { userId } = query;
 			const agents = await prisma.agent.findMany({
 				where: userId ? { userId } : undefined,
-				orderBy: { created_at: 'desc' },
+				orderBy: { createdAt: 'desc' },
 			});
 			return agents;
 		},
@@ -47,7 +47,7 @@ export const agentRoutes = new Elysia({ prefix: '/api/agents' })
 					name: string;
 					description?: string;
 					model?: string;
-					system_prompt?: string;
+					systemPrompt?: string;
 					userId: string;
 				},
 			});
@@ -58,7 +58,7 @@ export const agentRoutes = new Elysia({ prefix: '/api/agents' })
 				name: t.String(),
 				description: t.Optional(t.String()),
 				model: t.Optional(t.String()),
-				system_prompt: t.Optional(t.String()),
+				systemPrompt: t.Optional(t.String()),
 				userId: t.String(),
 			}),
 		},
@@ -81,7 +81,7 @@ export const agentRoutes = new Elysia({ prefix: '/api/agents' })
 				name: t.Optional(t.String()),
 				description: t.Optional(t.String()),
 				model: t.Optional(t.String()),
-				system_prompt: t.Optional(t.String()),
+				systemPrompt: t.Optional(t.String()),
 				status: t.Optional(t.String()),
 			}),
 		},

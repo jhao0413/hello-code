@@ -11,14 +11,14 @@ export const conversationRoutes = new Elysia({ prefix: '/api/conversations' })
 				where: userId ? { userId } : undefined,
 				include: {
 					messages: {
-						orderBy: { created_at: 'asc' },
+						orderBy: { createdAt: 'asc' },
 						take: 1,
 					},
 					agent: {
 						select: { name: true },
 					},
 				},
-				orderBy: { updated_at: 'desc' },
+				orderBy: { updatedAt: 'desc' },
 			});
 			return conversations;
 		},
@@ -36,7 +36,7 @@ export const conversationRoutes = new Elysia({ prefix: '/api/conversations' })
 				where: { id: params.id },
 				include: {
 					messages: {
-						orderBy: { created_at: 'asc' },
+						orderBy: { createdAt: 'asc' },
 					},
 					agent: true,
 				},

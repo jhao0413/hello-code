@@ -32,7 +32,7 @@ export const userRoutes = new Elysia({ prefix: '/api/users' })
 						email: true,
 						name: true,
 						image: true,
-						created_at: true,
+						createdAt: true,
 					},
 				});
 

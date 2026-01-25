@@ -5,13 +5,13 @@ export interface User {
 	email: string;
 	name?: string;
 	image?: string;
-	created_at: string;
-	email_verified?: boolean;
+	createdAt: string;
+	emailVerified?: boolean;
 }
 
 export interface AuthResponse {
 	user: User;
-	access_token: string;
+	accessToken: string;
 	message?: string;
 }
 
@@ -55,8 +55,8 @@ export const authService = {
 		}
 
 		const data: AuthResponse = await response.json();
-		if (data.access_token) {
-			this.setAccessToken(data.access_token);
+		if (data.accessToken) {
+			this.setAccessToken(data.accessToken);
 		}
 		return data;
 	},
@@ -75,13 +75,13 @@ export const authService = {
 		}
 
 		const data: AuthResponse = await response.json();
-		if (data.access_token) {
-			this.setAccessToken(data.access_token);
+		if (data.accessToken) {
+			this.setAccessToken(data.accessToken);
 		}
 		return data;
 	},
 
-	async refresh(): Promise<{ access_token: string }> {
+	async refresh(): Promise<{ accessToken: string }> {
 		const response = await fetch(`${API_BASE}/auth/refresh`, {
 			method: 'POST',
 			credentials: 'include',
@@ -92,8 +92,8 @@ export const authService = {
 			throw new Error('Token 刷新失败');
 		}
 
-		const data: { access_token: string } = await response.json();
-		this.setAccessToken(data.access_token);
+		const data: { accessToken: string } = await response.json();
+		this.setAccessToken(data.accessToken);
 		return data;
 	},
 
