@@ -33,6 +33,7 @@ import {
 import { MultiFileDiff } from '@pierre/diffs/react';
 import { Col, Row, Timeline, DatePicker, Tooltip } from 'antd';
 import { Fragment, useEffect, useState } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import {
 	Area,
 	AreaChart,
@@ -50,6 +51,17 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../utils/api';
 
 const { RangePicker } = DatePicker;
+
+type CodeHighlighterProps = {
+	language?: string;
+	style?: unknown;
+	customStyle?: CSSProperties;
+	wrapLongLines?: boolean;
+	children?: string;
+};
+
+const CodeHighlighter =
+	SyntaxHighlighter as unknown as ComponentType<CodeHighlighterProps>;
 
 // Mock Data
 const mockStats: DashboardStats = {
@@ -583,19 +595,19 @@ function formatMessageContent(content: string): (string | JSX.Element)[] {
 					<div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
 						<CopyOutlined className="text-gray-400 hover:text-gray-600 cursor-pointer" />
 					</div>
-					<SyntaxHighlighter
-						language={lang}
-						style={vscDarkPlus}
-						customStyle={{
-							borderRadius: '0.5rem',
-							fontSize: '0.875rem',
-							lineHeight: '1.625',
-							margin: 0,
-						}}
-						wrapLongLines={true}
-					>
-						{code}
-					</SyntaxHighlighter>
+				<CodeHighlighter
+					language={lang}
+					style={vscDarkPlus}
+					customStyle={{
+						borderRadius: '0.5rem',
+						fontSize: '0.875rem',
+						lineHeight: '1.625',
+						margin: 0,
+					}}
+					wrapLongLines={true}
+				>
+					{code}
+				</CodeHighlighter>
 				</div>
 			);
 		}
