@@ -70,8 +70,7 @@ hello-code/
 │   │   └── prisma/
 │   │       ├── schema.prisma
 │   │       └── migrations/
-│   └── neovate-code/             # Neovate Code 分支（二次开发）
-│       └── (Fork from neovateai/neovate-code)
+│   └── ...
 └── package.json                  # Workspace 根目录
 ```
 
@@ -95,7 +94,7 @@ hello-code/
 
 1. 克隆仓库：
 ```bash
-git clone --recurse-submodules <repository-url>
+git clone <repository-url>
 cd hello-code
 ```
 
@@ -186,92 +185,6 @@ NODE_ENV=development
 - Anthropic Claude (claude-3-sonnet, claude-3-opus, claude-3-haiku)
 - OpenAI GPT (gpt-4, gpt-4-turbo, gpt-3.5-turbo)
 - DeepSeek (deepseek-chat, deepseek-coder)
-
-## Neovate Code 二次开发
-
-本项目在 `packages/neovate-code/` 中包含了 [neovateai/neovate-code](https://github.com/neovateai/neovate-code) 的 Fork 版本，作为 Git submodule 进行自定义开发。
-
-### 初始设置
-
-克隆本仓库时，初始化 submodules：
-
-```bash
-# 克隆时包含 submodules
-git clone --recurse-submodules <repository-url>
-
-# 或者如果已经克隆，初始化 submodules
-git submodule update --init --recursive
-```
-
-### Git 配置
-
-neovate-code submodule 配置了双 remote：
-- **origin**：你的 Fork 仓库 `git@github.com:jhao0413/neovate-code.git`（用于自定义修改）
-- **upstream**：原始仓库 `git@github.com:neovateai/neovate-code.git`（用于同步更新）
-
-### 同步上游更新
-
-从原始仓库拉取最新更改：
-
-```bash
-cd packages/neovate-code
-
-# 从原始仓库获取更新
-git fetch upstream
-
-# 合并到本地分支
-git merge upstream/main
-
-# 推送到你的 Fork
-git push origin main
-
-# 在主仓库中更新 submodule 引用
-cd ../..
-git add packages/neovate-code
-git commit -m "chore: update neovate-code submodule"
-```
-
-### 自定义开发工作流
-
-1. **创建功能分支**：
-```bash
-cd packages/neovate-code
-git checkout -b feat/your-feature
-```
-
-2. **进行修改并提交**：
-```bash
-git add .
-git commit -m "feat: your changes"
-```
-
-3. **推送到你的 Fork**：
-```bash
-git push origin feat/your-feature
-```
-
-4. **更新主仓库以引用你的更改**：
-```bash
-cd ../..
-git add packages/neovate-code
-git commit -m "chore: update neovate-code to latest"
-```
-
-### 拉取最新的 Submodule 更改
-
-当其他团队成员更新了 submodule：
-
-```bash
-# 拉取主仓库的更改
-git pull
-
-# 更新 submodules 以匹配引用的 commit
-git submodule update --remote --merge
-```
-
-### 贡献回上游
-
-如果你的更改对原始项目有价值，可以从你的 Fork（`jhao0413/neovate-code`）向原始仓库（`neovateai/neovate-code`）创建 Pull Request。
 
 ## 许可证
 
