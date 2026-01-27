@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { generateObject } from 'ai';
+import { generateObject, type LanguageModel } from 'ai';
 import { openai } from '@ai-sdk/openai';
 
 // Schema for the database metadata
@@ -120,10 +120,17 @@ export const sqlGenerationTool = createTool({
       .describe('The natural language question to convert to SQL'),
     databaseSchema: databaseSchemaSchema.describe('The database schema information'),
   }),
-  description:
-    'Converts a natural language question into a PostgreSQL query based on the database schema',
-  execute: async ({ context: { naturalLanguageQuery, databaseSchema } }) => {
-    const schemaDescription = createSchemaDescription(databaseSchema);
+	description:
+		'Converts a natural language question into a PostgreSQL query based on the database schema',
+	execute: async ({ context }) => {
+		const { naturalLanguageQuery, databaseSchema } = context;
+		if (!naturalLanguageQuery) {
+			throw new Error('Missing natural language query');
+		}
+		if (!databaseSchema) {
+			throw new Error('Missing database schema');
+		}
+		const schemaDescription = createSchemaDescription(databaseSchema);
 
     const systemPrompt = `You are an expert PostgreSQL query generator. Given a database schema and a natural language question, generate an accurate SQL query.
 
@@ -149,13 +156,14 @@ Provide a valid SQL query along with:
 - List of tables used in the query`;
 
     try {
-      const result = await generateObject({
-        model: openai('gpt-4o'),
-        schema: sqlGenerationSchema,
-        system: systemPrompt,
-        prompt: naturalLanguageQuery,
-        temperature: 0.1, // Low temperature for more deterministic results
-      });
+		const model = openai('gpt-4o') as unknown as LanguageModel;
+		const result = await generateObject({
+			model,
+			schema: sqlGenerationSchema,
+			system: systemPrompt,
+			prompt: naturalLanguageQuery,
+			temperature: 0.1, // Low temperature for more deterministic results
+		});
 
       console.log('✅ SQL generated successfully:', {
         confidence: result.object.confidence,

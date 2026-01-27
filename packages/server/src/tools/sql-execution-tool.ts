@@ -26,13 +26,20 @@ const executeQuery = async (client: Client, query: string) => {
 
 export const sqlExecutionTool = createTool({
   id: 'sql-execution',
-  inputSchema: z.object({
-    connectionString: z.string().describe('PostgreSQL connection string'),
-    query: z.string().describe('SQL query to execute'),
-  }),
-  description: 'Executes SQL queries against a PostgreSQL database (SELECT queries only)',
-  execute: async ({ context: { connectionString, query } }) => {
-    const client = createDatabaseConnection(connectionString);
+	inputSchema: z.object({
+		connectionString: z.string().describe('PostgreSQL connection string'),
+		query: z.string().describe('SQL query to execute'),
+	}),
+	description: 'Executes SQL queries against a PostgreSQL database (SELECT queries only)',
+	execute: async ({ context }) => {
+		const { connectionString, query } = context;
+		if (!connectionString) {
+			throw new Error('Missing database connection string');
+		}
+		if (!query) {
+			throw new Error('Missing SQL query');
+		}
+		const client = createDatabaseConnection(connectionString);
 
     try {
       console.log('🔌 Connecting to PostgreSQL for query execution...');

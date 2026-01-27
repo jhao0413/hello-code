@@ -27,10 +27,14 @@ export const databaseIntrospectionTool = createTool({
   inputSchema: z.object({
     connectionString: z.string().describe('PostgreSQL connection string'),
   }),
-  description:
-    'Introspects a PostgreSQL database to understand its schema, tables, columns, and relationships',
-  execute: async ({ context: { connectionString } }) => {
-    const client = createDatabaseConnection(connectionString);
+	description:
+		'Introspects a PostgreSQL database to understand its schema, tables, columns, and relationships',
+	execute: async ({ context }) => {
+		const { connectionString } = context;
+		if (!connectionString) {
+			throw new Error('Missing database connection string');
+		}
+		const client = createDatabaseConnection(connectionString);
 
     try {
       console.log('🔌 Connecting to PostgreSQL for introspection...');

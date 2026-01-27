@@ -7,6 +7,7 @@ import {
 	verifyPassword,
 	verifyRefreshToken,
 	type AccessPayload,
+	type RefreshPayload,
 } from '../lib/auth.js';
 import { createAuthError, requireAuth } from '../lib/auth-helper.js';
 
@@ -16,7 +17,12 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 	.post(
 		'/register',
 		async ({ body, set, cookie }) => {
-			const { email, password, name } = body;
+			type RegisterBody = {
+				email: string;
+				password: string;
+				name?: string;
+			};
+			const { email, password, name } = body as RegisterBody;
 
 			const existingUser = await prisma.user.findUnique({
 				where: { email },
@@ -50,7 +56,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 				type: 'access',
 			};
 
-			const refreshPayload = {
+			const refreshPayload: RefreshPayload = {
 				userId: user.id,
 				email: user.email,
 				type: 'refresh',
@@ -84,7 +90,11 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 	.post(
 		'/login',
 		async ({ body, set, cookie }) => {
-			const { email, password } = body;
+			type LoginBody = {
+				email: string;
+				password: string;
+			};
+			const { email, password } = body as LoginBody;
 
 			const user = await prisma.user.findUnique({
 				where: { email },
@@ -108,7 +118,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 				type: 'access',
 			};
 
-			const refreshPayload = {
+			const refreshPayload: RefreshPayload = {
 				userId: user.id,
 				email: user.email,
 				type: 'refresh',
@@ -147,7 +157,10 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 	.post(
 		'/refresh',
 		async ({ cookie, set }) => {
-			const refreshToken = cookie.refresh_token.value;
+			const refreshToken =
+				typeof cookie.refresh_token.value === 'string'
+					? cookie.refresh_token.value
+					: undefined;
 
 			if (!refreshToken) {
 				set.status = 401;

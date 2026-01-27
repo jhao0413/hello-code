@@ -43,8 +43,8 @@ export const chatRoutes = new Elysia({ prefix: '/api/chat' }).post(
 			const agent = await prisma.agent.findUnique({
 				where: { id: agentId },
 			});
-			if (agent?.system_prompt) {
-				systemPrompt = agent.system_prompt;
+			if (agent?.systemPrompt) {
+				systemPrompt = agent.systemPrompt;
 			}
 		}
 

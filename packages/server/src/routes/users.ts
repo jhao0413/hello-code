@@ -10,10 +10,6 @@ const profileBodySchema = t.Object({
 
 type ProfileBody = Static<typeof profileBodySchema>;
 
-type AuthenticatedContext = {
-	user: AccessPayload;
-};
-
 export const userRoutes = new Elysia({ prefix: '/api/users' })
 	.patch(
 		'/profile',
