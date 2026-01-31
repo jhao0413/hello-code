@@ -805,12 +805,12 @@ export default function Dashboard() {
 						period: '较昨日', 
 						color: 'green' 
 					},
-					{ 
-						title: 'Token 消耗', 
-						value: `${(stats.totalTokens / 1000).toFixed(1)}k`, 
-						icon: <FireOutlined />, 
-						meta: `输入: ${(stats.promptTokens/1000).toFixed(1)}k / 输出: ${(stats.completionTokens/1000).toFixed(1)}k`, 
-						color: 'purple' 
+					{
+						title: 'Token 消耗',
+						value: `${(stats.totalTokens / 1000000).toFixed(1)}M`,
+						icon: <FireOutlined />,
+						meta: `输入: ${(stats.promptTokens/1000000).toFixed(1)}M / 输出: ${(stats.completionTokens/1000000).toFixed(1)}M`,
+						color: 'purple'
 					},
 					{ 
 						title: '请求成功率', 
