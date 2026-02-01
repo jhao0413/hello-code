@@ -6,6 +6,7 @@ import {
 	UserOutlined,
 	LogoutOutlined,
 	SettingOutlined,
+	KeyOutlined,
 } from '@ant-design/icons';
 import {
 	Button,
@@ -16,8 +17,10 @@ import {
 	DropdownItem,
 	Avatar,
 } from '@heroui/react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { ApiKeysModal } from './ApiKeysModal';
 
 interface HeaderProps {
 	title: string;
@@ -27,6 +30,7 @@ interface HeaderProps {
 export function Header({ title }: HeaderProps) {
 	const { user, logout } = useAuth();
 	const navigate = useNavigate();
+	const [apiKeysModalOpen, setApiKeysModalOpen] = useState(false);
 
 	const handleLogout = () => {
 		logout();
@@ -34,10 +38,11 @@ export function Header({ title }: HeaderProps) {
 	};
 
 	return (
-		<header
-			className={`sticky top-0 z-40 h-20 px-8 flex items-center justify-between
+		<>
+			<header
+				className={`sticky top-0 z-40 h-20 px-8 flex items-center justify-between
 			bg-white/70 backdrop-blur-md border-b border-white/20 shadow-sm transition-all duration-300`}
-		>
+			>
 			{/* Left: Title & Breadcrumbs */}
 			<div className="flex flex-col justify-center">
 				<h1 className="text-2xl font-bold text-gray-800 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
@@ -115,6 +120,13 @@ export function Header({ title }: HeaderProps) {
 							<DropdownItem key="settings" startContent={<SettingOutlined />}>
 								设置
 							</DropdownItem>
+							<DropdownItem
+								key="apikeys"
+								startContent={<KeyOutlined />}
+								onPress={() => setApiKeysModalOpen(true)}
+							>
+								API Keys 管理
+							</DropdownItem>
 							<DropdownItem key="divider" className="h-px bg-gray-200 my-1 p-0" />
 							<DropdownItem
 								key="logout"
@@ -129,5 +141,8 @@ export function Header({ title }: HeaderProps) {
 				</div>
 			</div>
 		</header>
+
+		<ApiKeysModal isOpen={apiKeysModalOpen} onClose={() => setApiKeysModalOpen(false)} />
+	</>
 	);
 }

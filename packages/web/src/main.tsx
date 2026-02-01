@@ -1,4 +1,5 @@
 import { HeroUIProvider } from '@heroui/react';
+import { ToastProvider } from '@heroui/toast';
 import { ConfigProvider } from 'antd';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -13,6 +14,7 @@ if (!rootElement) {
 createRoot(rootElement).render(
 	<StrictMode>
 		<HeroUIProvider>
+			<ToastProvider placement="top-right" toastOffset={60} />
 			<ConfigProvider
 				theme={{
 					token: {

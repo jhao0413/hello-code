@@ -16,6 +16,7 @@
 		"@ant-design/x": "^2.1.2",
 		"@antv/infographic": "^0.2.3",
 		"@heroui/react": "^2.7.0",
+		"@heroui/toast": "^2.0.19",
 		"@pierre/diffs": "^1.0.8",
 		"@types/react-syntax-highlighter": "^15.5.13",
 		"ai": "^6.0.6",
