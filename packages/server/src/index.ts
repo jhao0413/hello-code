@@ -2,6 +2,7 @@ import { cors } from '@elysiajs/cors';
 import { Elysia } from 'elysia';
 import { agentSessionRoutes } from './routes/agent-sessions.js';
 import { agentRoutes } from './routes/agents.js';
+import { apiKeyRoutes } from './routes/api-keys.js';
 import { authRoutes } from './routes/auth.js';
 import { chatRoutes } from './routes/chat.js';
 import { conversationRoutes } from './routes/conversations.js';
@@ -10,6 +11,7 @@ import { userRoutes } from './routes/users.js';
 const app = new Elysia()
 	.use(cors())
 	.use(authRoutes)
+	.use(apiKeyRoutes)
 	.use(chatRoutes)
 	.use(agentRoutes)
 	.use(conversationRoutes)

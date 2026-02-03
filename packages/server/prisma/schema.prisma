@@ -22,6 +22,7 @@ model User {
   agents        Agent[]
   conversations Conversation[]
   agentSessions AgentSession[]
+  apiKeys       ApiKey[]
 
   @@map("user")
 }
@@ -145,4 +146,21 @@ model AgentSession {
   @@index([userId])
   @@index([timestamp])
   @@map("agentSession")
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  keyHash    String    @unique /// SHA-256 hash of the API key
+  keyPrefix  String /// First 8 characters of the key for display
+  name       String /// User-given name for the key (e.g., "CLI")
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt  DateTime /// Expiration time of the key
+  lastUsedAt DateTime? /// Last time the key was used
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime? /// Time when the key was revoked (if revoked)
+
+  @@index([userId])
+  @@map("api_keys")
 }
