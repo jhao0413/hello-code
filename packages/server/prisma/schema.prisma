@@ -22,6 +22,7 @@ model User {
   agents        Agent[]
   conversations Conversation[]
   agentSessions AgentSession[]
+  agentRequests AgentRequest[]
   apiKeys       ApiKey[]
 
   @@map("user")
@@ -128,6 +129,7 @@ model AgentSession {
   id               String   @id @default(cuid()) /// Unique identifier for the agent session
   sessionId        String   @unique /// External session ID provided by the client
   userPrompt       String /// User's question or prompt
+  aiResponse       String? /// AI response content
   promptTokens     Int /// Number of input tokens used
   completionTokens Int /// Number of output tokens generated
   totalTokens      Int /// Total number of tokens used
@@ -146,6 +148,32 @@ model AgentSession {
   @@index([userId])
   @@index([timestamp])
   @@map("agentSession")
+}
+
+model AgentRequest {
+  id               String   @id @default(cuid())
+  sessionId        String /// External session ID (links to AgentSession)
+  userPrompt       String
+  aiResponse       String /// AI response content
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  success          Boolean
+  duration         Int
+  turnsCount       Int
+  toolCallsCount   Int
+  model            String
+  languages        String[]
+  timestamp        DateTime
+  createdAt        DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([timestamp])
+  @@map("agentRequest")
 }
 
 model ApiKey {

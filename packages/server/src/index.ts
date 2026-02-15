@@ -1,6 +1,7 @@
 import { cors } from '@elysiajs/cors';
 import { Elysia } from 'elysia';
 import { agentSessionRoutes } from './routes/agent-sessions.js';
+import { agentRequestRoutes } from './routes/agent-requests.js';
 import { agentRoutes } from './routes/agents.js';
 import { apiKeyRoutes } from './routes/api-keys.js';
 import { authRoutes } from './routes/auth.js';
@@ -16,6 +17,7 @@ const app = new Elysia()
 	.use(agentRoutes)
 	.use(conversationRoutes)
 	.use(agentSessionRoutes)
+	.use(agentRequestRoutes)
 	.use(userRoutes)
 	.get('/api/health', () => ({
 		status: 'ok',

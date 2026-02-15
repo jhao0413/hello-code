@@ -726,11 +726,48 @@ export default function Dashboard() {
 	const [selectedDiff, setSelectedDiff] = useState<typeof recentAdoptedCode[0] | null>(null);
 	const [chatModalOpen, setChatModalOpen] = useState(false);
 	const [selectedSession, setSelectedSession] = useState<typeof mockStats.recentSessions[0] | null>(null);
+	const [sessionLoading, setSessionLoading] = useState(false);
 
 	useEffect(() => {
-		// Use mock data instead of API call
-		setStats(mockStats);
-		setLoading(false);
+		async function fetchStats() {
+			try {
+				const response = await api.get('/agent-sessions/stats');
+				const data = response.data;
+
+				// Transform recentSessions to match frontend format
+				const recentSessions = data.recentSessions.map((s: {
+					id: string;
+					sessionId: string;
+					userPrompt: string;
+					success: boolean;
+					model: string;
+					totalTokens: number;
+					duration: number;
+					timestamp: string | Date;
+				}) => ({
+					id: s.id,
+					sessionId: s.sessionId,
+					userName: 'User',
+					model: s.model,
+					messages: [{ role: 'user' as const, content: s.userPrompt }],
+					success: s.success,
+					totalTokens: s.totalTokens,
+					duration: s.duration,
+					timestamp: typeof s.timestamp === 'string' ? s.timestamp : new Date(s.timestamp).toISOString(),
+				}));
+
+				setStats({
+					...data,
+					recentSessions,
+				});
+			} catch (err) {
+				console.error('Failed to fetch stats:', err);
+				setError('Failed to load dashboard data');
+			} finally {
+				setLoading(false);
+			}
+		}
+		fetchStats();
 	}, []);
 
 	if (error) {
@@ -742,6 +779,35 @@ export default function Dashboard() {
 			</div>
 		);
 	}
+
+	// 点击会话时获取完整详情
+	const handleSessionClick = async (session: typeof mockStats.recentSessions[0]) => {
+		// 先打开 modal 并显示加载状态
+		setSelectedSession(session);  // 设置基本信息
+		setChatModalOpen(true);
+		setSessionLoading(true);
+
+		try {
+			const response = await api.get(`/agent-requests/by-session/${session.sessionId}`);
+			const requests = response.data;
+
+			// 转换为消息格式
+			const messages = requests.flatMap((r: {
+				userPrompt: string;
+				aiResponse?: string;
+			}) => [
+				{ role: 'user' as const, content: r.userPrompt },
+				...(r.aiResponse ? [{ role: 'assistant' as const, content: r.aiResponse }] : [])
+			]);
+
+			// 直接使用 API 返回的消息顺序
+			setSelectedSession({ ...session, messages });
+		} catch (err) {
+			console.error('Failed to fetch session details:', err);
+		} finally {
+			setSessionLoading(false);
+		}
+	};
 
 	if (loading || !stats) return <DashboardSkeleton />;
 
@@ -1118,7 +1184,7 @@ export default function Dashboard() {
 							items={stats.recentSessions.slice(0, 5).map((s) => ({
 								color: s.success ? 'green' : 'red',
 								children: (
-									<div className="group -mt-1 pb-4 cursor-pointer" onClick={() => { setSelectedSession(s); setChatModalOpen(true); }}>
+									<div className="group -mt-1 pb-4 cursor-pointer" onClick={() => handleSessionClick(s)}>
 										<div className="flex justify-between text-xs text-gray-400 mb-1">
 											<span>{formatTimeAgo(s.timestamp)}</span>
 											<span className="font-mono">#{s.sessionId.slice(-4)}</span>
@@ -1215,7 +1281,11 @@ export default function Dashboard() {
 						<span className="text-lg font-bold">#{selectedSession?.sessionId.slice(-6)}</span>
 					</ModalHeader>
 					<ModalBody className="max-h-[70vh] overflow-y-auto">
-						{selectedSession && (
+						{sessionLoading ? (
+							<div className="flex justify-center items-center py-12">
+								<Skeleton className="rounded-lg w-full h-20" />
+							</div>
+						) : selectedSession && (
 							<div className="space-y-4">
 								{selectedSession.messages.map((msg, idx) => (
 									msg.role === 'user' ? (
