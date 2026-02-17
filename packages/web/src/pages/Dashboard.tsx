@@ -548,6 +548,8 @@ interface DashboardStats {
 		messages: {
 			role: 'user' | 'assistant';
 			content: string;
+			model?: string;
+			timestamp?: string;
 		}[];
 		success: boolean;
 		totalTokens: number;
@@ -795,9 +797,20 @@ export default function Dashboard() {
 			const messages = requests.flatMap((r: {
 				userPrompt: string;
 				aiResponse?: string;
+				model?: string;
+				timestamp?: string | Date;
 			}) => [
-				{ role: 'user' as const, content: r.userPrompt },
-				...(r.aiResponse ? [{ role: 'assistant' as const, content: r.aiResponse }] : [])
+				{
+					role: 'user' as const,
+					content: r.userPrompt,
+					timestamp: r.timestamp ? new Date(r.timestamp).toISOString() : undefined,
+				},
+				...(r.aiResponse ? [{
+					role: 'assistant' as const,
+					content: r.aiResponse,
+					model: r.model,
+					timestamp: r.timestamp ? new Date(r.timestamp).toISOString() : undefined,
+				}] : [])
 			]);
 
 			// 直接使用 API 返回的消息顺序
@@ -1295,7 +1308,9 @@ export default function Dashboard() {
 													<div className="flex items-center gap-2 mb-2">
 														<span className="text-xs font-medium text-blue-100">{selectedSession.userName}</span>
 														<span className="text-xs text-blue-200">·</span>
-														<span className="text-xs text-blue-200">{formatTimeAgo(selectedSession.timestamp)}</span>
+														<span className="text-xs text-blue-200">
+															{formatTimeAgo(msg.timestamp ?? selectedSession.timestamp)}
+														</span>
 													</div>
 													<p className="text-sm leading-relaxed break-words">{msg.content}</p>
 												</div>
@@ -1312,8 +1327,12 @@ export default function Dashboard() {
 												</Avatar>
 												<div className="bg-white px-4 py-3 rounded-2xl rounded-bl-md shadow-lg border border-gray-100 min-w-0 flex-1">
 													<div className="flex items-center gap-2 mb-2 flex-wrap">
-														<span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full whitespace-nowrap">{selectedSession.model}</span>
-														<span className="text-xs text-gray-400 whitespace-nowrap">{formatTimeAgo(selectedSession.timestamp)}</span>
+														<span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+															{msg.model ?? selectedSession.model}
+														</span>
+														<span className="text-xs text-gray-400 whitespace-nowrap">
+															{formatTimeAgo(msg.timestamp ?? selectedSession.timestamp)}
+														</span>
 													</div>
 													<div className="text-sm text-gray-800 leading-relaxed space-y-2 overflow-hidden">
 														{formatMessageContent(msg.content)}
